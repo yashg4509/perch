@@ -1,0 +1,29 @@
+name: vercel
+category: hosting
+deployable: true
+
+cli:
+  binary: vercel
+  commands:
+    logs:           "vercel logs {project} --output raw"
+    status:         "vercel inspect {project} --json"
+    deploy:         "vercel deploy --prod"
+    rollback:       "vercel rollback {deployment_id}"
+    env_list:       "vercel env ls {project}"
+    env_set:        "vercel env add {key} {value} {environment} {project}"
+    list_resources: "vercel project ls --json"
+
+api:
+  base_url: "https://api.vercel.com"
+  auth_header: "Authorization: Bearer {token}"
+  endpoints:
+    logs:           "GET /v2/deployments/{deployment_id}/events"
+    status:         "GET /v9/projects/{project}"
+    deploy:         "POST /v13/deployments"
+    rollback:       "PATCH /v12/deployments/{deployment_id}/cancel"
+    env_list:       "GET /v9/projects/{project}/env"
+    list_resources: "GET /v9/projects"
+
+credentials:
+  key: vercel_token
+  prompt: "Vercel API token (vercel.com/account/tokens)"

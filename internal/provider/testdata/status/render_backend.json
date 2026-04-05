@@ -1,0 +1,8 @@
+{
+  "healthy": false,
+  "error_rate": 0.123,
+  "last_deploy": { "sha": "d9e1f3a", "ago": "28m" },
+  "recent_errors": [
+    "14:31:02 ERROR Cannot read property 'id' of undefined at payments.ts:44"
+  ]
+}

@@ -1,0 +1,1 @@
+{"appName":"golden-graph","environment":"production","providers":["openai","vercel"],"nodes":[{"name":"api","provider":"openai","deployable":false},{"name":"web","provider":"vercel","deployable":true,"project":"demo"}],"edges":[{"from":"web","to":"api"}]}

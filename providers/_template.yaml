@@ -1,0 +1,19 @@
+# Copy to providers/<name>.yaml and fill in. See spec: Provider spec.
+name: example
+category: hosting
+deployable: true
+
+cli:
+  binary: example-cli
+  commands:
+    status: "example status --json"
+
+api:
+  base_url: "https://api.example.com"
+  auth_header: "Authorization: Bearer {token}"
+  endpoints:
+    status: "GET /v1/status"
+
+credentials:
+  key: example_token
+  prompt: "Example API token"

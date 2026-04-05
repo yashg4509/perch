@@ -1,0 +1,27 @@
+# Manual CLI fixture: same node names in every environment (required for global edges).
+# Use --env dev + scripts/local_stack.py for fully local green status checks.
+name: manual-cli-test-app
+environments:
+  production:
+    web:
+      provider: vercel
+      project: YOUR_VERCEL_PROJECT
+    api:
+      provider: openai
+  staging:
+    web:
+      provider: vercel
+      project: YOUR_VERCEL_PROJECT_STAGING
+    api:
+      provider: openai
+  dev:
+    web:
+      provider: custom
+      status: "curl -sf http://127.0.0.1:18081/health >/dev/null"
+      logs: "echo 'Tip: tail your frontend dev server log here'"
+    api:
+      provider: custom
+      status: "curl -sf http://127.0.0.1:18082/health >/dev/null"
+      logs: "echo 'Tip: tail your API dev server log here'"
+edges:
+  - web -> api

@@ -1,0 +1,11 @@
+{
+  "name": "perch-init-signals-demo",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Fixture for perch init: dependency signals only (no application code).",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.0",
+    "openai": "^4.0.0",
+    "stripe": "^16.0.0"
+  }
+}

@@ -1,0 +1,1 @@
+{"env":"production","nodes":[{"name":"api","provider":"openai","healthy":true},{"name":"web","provider":"vercel","healthy":false}]}

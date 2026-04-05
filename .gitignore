@@ -1,0 +1,45 @@
+# Cursor / local IDE (never commit)
+.cursor/
+
+# Go toolchain & build outputs
+/bin/
+/dist/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+coverage.out
+profile.cov
+
+# Dependency directories
+vendor/
+
+# Environment and secrets (perch credentials live in ~/.perch; never copy here)
+.env
+.env.*
+!.env.example
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.idea/
+*.iml
+.vscode/*
+!.vscode/extensions.json
+
+# Project-local perch state if ever created under the repo tree
+.perch/
+
+# Built binary at repo root (from go build -o perch)
+/perch
+
+# Local-only scripts (never commit)
+scripts/private/
+
+# Examples: generated perch.yaml in init-signals is ignored per-scenario .gitignore

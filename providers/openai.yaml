@@ -1,0 +1,16 @@
+name: openai
+category: ai
+deployable: false
+llm: true
+
+api:
+  base_url: "https://api.openai.com"
+  auth_header: "Authorization: Bearer {token}"
+  endpoints:
+    status: "GET /v1/models"
+    usage:  "GET /v1/usage"
+    errors: "GET /v1/usage?type=errors"
+
+credentials:
+  key: openai_api_key
+  prompt: "OpenAI API key (platform.openai.com/api-keys)"

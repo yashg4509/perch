@@ -1,0 +1,25 @@
+# Example stack: same node names in every environment (required for global edges).
+# Replace YOUR_VERCEL_* with real project names when testing live Vercel APIs.
+name: perch-example-full-stack
+environments:
+  production:
+    web:
+      provider: vercel
+      project: YOUR_VERCEL_PROJECT
+    llm:
+      provider: openai
+  staging:
+    web:
+      provider: vercel
+      project: YOUR_VERCEL_PROJECT_STAGING
+    llm:
+      provider: openai
+  dev:
+    web:
+      provider: custom
+      status: "curl -sf http://127.0.0.1:18080/health >/dev/null"
+      logs: "echo 'Example: tail your local app log instead'"
+    llm:
+      provider: openai
+edges:
+  - web -> llm

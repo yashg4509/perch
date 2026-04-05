@@ -1,0 +1,9 @@
+{
+  "name": "perch-full-stack-demo",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Optional NPM signals aligned with perch.yaml (run perch init in init-signals for pure detection tests).",
+  "dependencies": {
+    "openai": "^4.0.0"
+  }
+}

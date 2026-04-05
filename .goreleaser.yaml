@@ -1,0 +1,46 @@
+# https://goreleaser.com
+version: 2
+
+project_name: perch
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    main: ./cmd/perch
+    binary: perch
+    ldflags:
+      - -s -w
+
+archives:
+  - format: tar.gz
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - README.md
+
+checksum:
+  name_template: checksums.txt
+
+changelog:
+  disable: true
+
+brews:
+  - name: perch
+    repository:
+      owner: yashg4509
+      name: homebrew-perch
+    directory: Formula
+    commit_msg_template: "brew: {{ .ProjectName }} {{ .Tag }}"
+    homepage: "https://github.com/yashg4509/perch"
+    description: "Terminal UI for exploring multi-service deployment stacks"
+    license: MIT
