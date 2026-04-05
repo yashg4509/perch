@@ -12,7 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`docs/`** — public contributor docs: [docs/providers.md](docs/providers.md), [docs/add-perch-provider-skill.md](docs/add-perch-provider-skill.md) (agent-agnostic provider workflow).
 - Open-source baseline: `LICENSE` (MIT), `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `SECURITY.md`, GitHub issue/PR templates.
 - `examples/` manual test workspace with scenarios for `perch init`, `status`, `graph`, `context`, and the root TUI.
-- Root `.gitignore` (including `.cursor/`). `scripts/wait-for-plan-task.sh` polls a **local** plan file when `PLAN` is set.
+- Root `.gitignore` (including `.cursor/` and `scripts/private/` for local-only helper scripts).
 
 ### Changed
 

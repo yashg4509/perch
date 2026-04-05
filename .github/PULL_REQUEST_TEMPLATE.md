@@ -4,7 +4,7 @@
 
 ## Why
 
-<!-- Problem solved or spec/plan task ID -->
+<!-- Problem solved, issue link, or short motivation -->
 
 ## How tested
 

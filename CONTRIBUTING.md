@@ -63,16 +63,6 @@ We follow **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/)** in [CHANG
 
 **Tagging a release** (maintainers): confirm `go test ./...`, finalize `CHANGELOG.md` (rename `[Unreleased]` to a dated version), create an annotated tag, then run [GoReleaser](https://goreleaser.com/) per [`.goreleaser.yaml`](.goreleaser.yaml) (e.g. `goreleaser release --clean` with `GITHUB_TOKEN` for assets and the Homebrew tap).
 
-## Private planning helper (optional)
-
-If you keep a **personal** task checklist outside this repo, you can poll until a line is checked with:
-
-```bash
-PLAN=~/path/to/your-plan.md ./scripts/wait-for-plan-task.sh T4-006
-```
-
-Nothing under a fixed `maintainer/` path is shipped in the repository anymore.
-
 ## Community standards
 
 - [Code of Conduct](CODE_OF_CONDUCT.md)
