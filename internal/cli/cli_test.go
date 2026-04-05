@@ -139,6 +139,70 @@ func TestInit_writesValidPerchYAML(t *testing.T) {
 	}
 }
 
+func TestEdge_addListRemove(t *testing.T) {
+	const yamlDoc = `name: edge-cli
+environments:
+  production:
+    api: { provider: openai }
+    web: { provider: vercel, project: demo }
+edges: []
+`
+	tmp := t.TempDir()
+	if err := os.WriteFile(filepath.Join(tmp, "perch.yaml"), []byte(yamlDoc), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	t.Chdir(tmp)
+
+	var buf, errBuf bytes.Buffer
+	root := NewRootCmd()
+	root.SetOut(&buf)
+	root.SetErr(&errBuf)
+
+	buf.Reset()
+	errBuf.Reset()
+	root.SetArgs([]string{"edge", "add", "web", "api"})
+	if err := root.Execute(); err != nil {
+		t.Fatalf("add: %v stderr=%q", err, errBuf.String())
+	}
+	raw, err := os.ReadFile(filepath.Join(tmp, "perch.yaml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := config.Load(raw); err != nil {
+		t.Fatalf("invalid yaml after add: %v\n%s", err, raw)
+	}
+
+	buf.Reset()
+	errBuf.Reset()
+	root.SetArgs([]string{"edge", "list"})
+	if err := root.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Contains(buf.Bytes(), []byte("web -> api")) {
+		t.Fatalf("list: %q", buf.String())
+	}
+
+	buf.Reset()
+	errBuf.Reset()
+	root.SetArgs([]string{"edge", "rm", "web", "api"})
+	if err := root.Execute(); err != nil {
+		t.Fatalf("rm: %v stderr=%q", err, errBuf.String())
+	}
+	raw2, _ := os.ReadFile(filepath.Join(tmp, "perch.yaml"))
+	c2, err := config.Load(raw2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(c2.Edges) != 0 {
+		t.Fatalf("edges = %#v", c2.Edges)
+	}
+
+	root.SetArgs([]string{"edge", "rm", "web", "api"})
+	if err := root.Execute(); err == nil {
+		t.Fatal("expected error removing missing edge")
+	}
+}
+
 func TestInit_JSON_output(t *testing.T) {
 	tmp := t.TempDir()
 	if err := os.WriteFile(filepath.Join(tmp, "vercel.json"), []byte("{}"), 0o644); err != nil {

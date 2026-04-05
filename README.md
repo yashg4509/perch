@@ -90,6 +90,7 @@ Every environment must use the **same node names**; **edges** are global across 
 | `perch init` | Scaffold / refresh `perch.yaml` using repo detection heuristics. |
 | `perch status` | Per-node health-style signals (`--json` for machines). |
 | `perch graph` | Topology (`--json` for machines). |
+| `perch edge` | **list** / **add FROM TO** / **remove FROM TO** (aliases **rm**, **delete**) — edits `perch.yaml` edges without hand-editing; **`--dry-run`** prints canonical YAML. |
 | `perch context` | Merged topology + status; `--for-agent` for plain text LLM context. |
 
 Common flags: **`--env`**, **`--json`**, **`--no-color`**.

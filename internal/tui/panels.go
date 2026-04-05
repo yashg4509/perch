@@ -36,6 +36,9 @@ Environment
 Other
   ?             toggle this palette
   q             quit
+
+Shell (edits perch.yaml)
+  perch edge list | add FROM TO | remove FROM TO   (--dry-run to preview)
 `
 	return clipBlock(stylePanelFrame("Command palette", body, width, noColor), width, height)
 }

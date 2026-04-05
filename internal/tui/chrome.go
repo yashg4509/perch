@@ -85,7 +85,7 @@ func graphFlowsLine(g *graph.Graph) string {
 }
 
 func cliTipLine() string {
-	return "Tip: perch status --json · perch graph --json · perch context --for-agent"
+	return "Tip: perch edge list|add|rm · perch status --json · perch graph --json · perch context --for-agent"
 }
 
 func keyBarLine(env *EnvSwitcher) string {

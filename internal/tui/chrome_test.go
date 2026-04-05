@@ -26,7 +26,7 @@ func TestStackChrome_includesSummaryAndFlows(t *testing.T) {
 	if !strings.Contains(s, "web→api") {
 		t.Fatalf("missing flow: %q", s)
 	}
-	if !strings.Contains(s, "status --json") || !strings.Contains(s, "? palette") {
+	if !strings.Contains(s, "perch edge") || !strings.Contains(s, "status --json") || !strings.Contains(s, "? palette") {
 		t.Fatalf("missing tips: %q", s)
 	}
 }

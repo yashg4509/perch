@@ -41,6 +41,11 @@ Replace `./perch` with the path to your built binary.
 # Graph topology (JSON)
 ./perch graph --json
 
+# Edges in perch.yaml (no hand-editing)
+./perch edge list
+# ./perch edge add web api
+# ./perch edge rm web api --dry-run
+
 # Status for current env (--env defaults to production)
 ./perch status
 ./perch status --json
