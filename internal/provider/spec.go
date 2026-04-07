@@ -7,7 +7,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// Spec is the typed provider definition loaded from providers/*.yaml.
+// Spec is the typed provider definition loaded from providers/**/*.yaml.
 type Spec struct {
 	Name        string          `yaml:"name"`
 	Category    string          `yaml:"category"`

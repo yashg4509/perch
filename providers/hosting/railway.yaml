@@ -1,0 +1,26 @@
+# Docs: https://docs.railway.com/guides/public-api GraphQL POST /graphql/v2; GET probe for reachability until POST is supported.
+# CLI: https://docs.railway.com/cli/
+name: railway
+category: hosting
+deployable: true
+
+cli:
+  binary: railway
+  commands:
+    logs: "railway logs -s {service} --json -n 100"
+    status: "railway status --json"
+    deploy: "railway up -s {service}"
+    env_list: "railway variable list -s {service} --json"
+    env_set: "railway variable set {key}={value} -s {service}"
+    list_resources: "railway service status --all --json"
+
+api:
+  base_url: "https://backboard.railway.com"
+  auth_header: "Authorization: Bearer {token}"
+  endpoints:
+    status: "GET /graphql/v2?query=%7B__typename%7D"
+    list_resources: "GET /graphql/v2?query=%7B__typename%7D"
+
+credentials:
+  key: railway_token
+  prompt: "Railway account or workspace API token (railway.com/account/tokens)"

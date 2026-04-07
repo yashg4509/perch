@@ -27,7 +27,7 @@ Start with the **[README](README.md)** for what perch does and how config, provi
 - **Tests:** Prefer test-driven changes: extend or add `_test.go` files, then implement until `go test ./...` is green. CI must pass before merge.
 - **Formatting:** Match `gofmt` / CI (see `.github/workflows/ci.yml`).
 - **Scope:** Keep pull requests focused—one feature or fix per PR when practical.
-- **Providers:** See **[docs/providers.md](docs/providers.md)** and the agent workflow in **[docs/add-perch-provider-skill.md](docs/add-perch-provider-skill.md)** (any coding agent: Cursor, Claude Code, Copilot, OpenCode, Codex, …).
+- **Providers:** The tree ships **standard platform YAML** in **`providers/`** (embedded at build time). See **[docs/providers.md](docs/providers.md)** for the bundled catalog, **`perch init`** detection, and runtime notes; use **[docs/add-perch-provider-skill.md](docs/add-perch-provider-skill.md)** when adding or fixing a definition (any coding agent: Cursor, Claude Code, Copilot, OpenCode, Codex, …).
 
 ## Where to change what
 
@@ -35,7 +35,7 @@ Start with the **[README](README.md)** for what perch does and how config, provi
 |------|------------|
 | New CLI flag or command | `internal/cli/` |
 | `perch.yaml` schema or validation | `internal/config/` |
-| New platform YAML | `providers/`, then `make provider-validate` |
+| New or updated platform YAML | `providers/` (keep in sync with `internal/detect` if you add a new id), then `make provider-validate` |
 | Provider HTTP / template behavior | `internal/provider/` (see **Runtime** in [docs/providers.md](docs/providers.md)) |
 | TUI layout or keys | `internal/tui/` |
 | Init detection heuristics | `internal/detect/`, `internal/scaffold/` |

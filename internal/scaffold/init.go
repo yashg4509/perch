@@ -145,6 +145,24 @@ func nodeYAML(name, pid string, reg *provider.Registry) []string {
 		return lines
 	}
 	if !sp.Deployable {
+		switch pid {
+		case "auth0":
+			lines = append(lines, "      project: YOUR_TENANT.us.auth0.com")
+		case "twilio":
+			lines = append(lines, "      project: ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
+		case "pinecone":
+			lines = append(lines, "      project: CHANGE_ME_INDEX_NAME")
+		case "neon", "postgres":
+			lines = append(lines, "      project: CHANGE_ME_NEON_PROJECT_ID")
+		case "planetscale", "mysql":
+			lines = append(lines, "      project: CHANGE_ME_ORG_SLUG")
+		case "mongodb":
+			lines = append(lines, "      project: CHANGE_ME_ATLAS_PROJECT_ID")
+		case "cloudinary":
+			lines = append(lines, "      project: CHANGE_ME_CLOUD_NAME")
+		case "upstash":
+			lines = append(lines, "      project: CHANGE_ME_DATABASE_ID")
+		}
 		return lines
 	}
 	switch pid {

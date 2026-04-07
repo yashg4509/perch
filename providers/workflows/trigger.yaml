@@ -1,0 +1,22 @@
+# Docs: https://trigger.dev/docs/management/authentication — REST https://api.trigger.dev — CLI https://trigger.dev/docs/cli-introduction
+name: trigger
+category: jobs
+deployable: true
+
+cli:
+  binary: npx
+  commands:
+    status: "npx -y trigger.dev@latest whoami"
+    deploy: "npx -y trigger.dev@latest deploy"
+    list_resources: "npx -y trigger.dev@latest whoami"
+
+api:
+  base_url: "https://api.trigger.dev"
+  auth_header: "Authorization: Bearer {token}"
+  endpoints:
+    status: "GET /api/v1/whoami"
+    list_resources: "GET /api/v1/whoami"
+
+credentials:
+  key: trigger_secret_key
+  prompt: "Trigger.dev secret key (tr_dev_/tr_prod_) or personal access token (tr_pat_) from cloud.trigger.dev"

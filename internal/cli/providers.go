@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -10,7 +11,7 @@ import (
 )
 
 // loadRegistryForProject loads YAML from PERCH_PROVIDERS_DIR, else providers/ under projectRoot
-// when it contains non-underscore *.yaml, else the bundled definitions shipped with the binary.
+// when it contains non-underscore *.yaml (any depth), else the bundled definitions shipped with the binary.
 func loadRegistryForProject(projectRoot string) (*provider.Registry, error) {
 	if d := strings.TrimSpace(os.Getenv("PERCH_PROVIDERS_DIR")); d != "" {
 		return provider.LoadRegistry(d)
@@ -26,23 +27,21 @@ func loadRegistryForProject(projectRoot string) (*provider.Registry, error) {
 }
 
 func hasProviderYAML(dir string) bool {
-	entries, err := os.ReadDir(dir)
-	if err != nil {
-		return false
-	}
-	for _, e := range entries {
-		if e.IsDir() {
-			continue
+	var found bool
+	_ = filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() {
+			return nil
 		}
-		n := e.Name()
+		n := d.Name()
 		if !strings.HasSuffix(n, ".yaml") && !strings.HasSuffix(n, ".yml") {
-			continue
+			return nil
 		}
 		base := strings.TrimSuffix(strings.TrimSuffix(n, ".yaml"), ".yml")
 		if strings.HasPrefix(base, "_") {
-			continue
+			return nil
 		}
-		return true
-	}
-	return false
+		found = true
+		return filepath.SkipAll
+	})
+	return found
 }

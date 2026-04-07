@@ -1,0 +1,15 @@
+# Docs: https://docs.langchain.com/langsmith/auth — REST paths under /api/v1 (see LangSmith OpenAPI / SDK references)
+name: langsmith
+category: observability
+deployable: false
+
+api:
+  base_url: "https://api.smith.langchain.com"
+  auth_header: "x-api-key: {token}"
+  endpoints:
+    status: "GET /api/v1/sessions?limit=1"
+    list_resources: "GET /api/v1/sessions?limit=20"
+
+credentials:
+  key: langsmith_api_key
+  prompt: "LangSmith API key (smith.langchain.com → Settings → API Keys)"

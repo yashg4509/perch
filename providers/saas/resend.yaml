@@ -1,0 +1,14 @@
+# Docs: https://resend.com/docs/api-reference/domains/list-domains
+name: resend
+category: email
+deployable: false
+
+api:
+  base_url: "https://api.resend.com"
+  auth_header: "Authorization: Bearer {token}"
+  endpoints:
+    status: "GET /domains"
+
+credentials:
+  key: resend_api_key
+  prompt: "Resend API key (resend.com/api-keys)"

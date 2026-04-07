@@ -1,0 +1,25 @@
+# Docs: https://docs.netlify.com/api/get-started/ — REST v1; CLI https://cli.netlify.com/
+name: netlify
+category: hosting
+deployable: true
+
+cli:
+  binary: netlify
+  commands:
+    logs: "netlify logs --site {project}"
+    status: "netlify status --json"
+    deploy: "netlify deploy --prod --site {project}"
+    env_list: "netlify env:list --site {project} --json"
+    env_set: "netlify env:set {key} {value} --site {project}"
+    list_resources: "netlify sites:list --json"
+
+api:
+  base_url: "https://api.netlify.com/api/v1"
+  auth_header: "Authorization: Bearer {token}"
+  endpoints:
+    status: "GET /sites/{project}"
+    list_resources: "GET /sites"
+
+credentials:
+  key: netlify_token
+  prompt: "Netlify personal access token (app.netlify.com → User settings → Applications → Personal access tokens)"

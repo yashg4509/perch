@@ -1,0 +1,15 @@
+# Docs: https://posthog.com/docs/api — use your PostHog region host if not US cloud
+name: posthog
+category: analytics
+deployable: false
+
+api:
+  base_url: "https://app.posthog.com/api"
+  auth_header: "Authorization: Bearer {token}"
+  endpoints:
+    status: "GET /projects/"
+    list_resources: "GET /projects/"
+
+credentials:
+  key: posthog_personal_api_key
+  prompt: "PostHog personal API key (app.posthog.com → Project → Settings → Personal API Keys)"

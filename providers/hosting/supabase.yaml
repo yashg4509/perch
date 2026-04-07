@@ -1,0 +1,24 @@
+# Docs: https://supabase.com/docs/reference/api/introduction — Management API
+# CLI: https://supabase.com/docs/guides/cli
+name: supabase
+category: db
+deployable: true
+
+cli:
+  binary: supabase
+  commands:
+    logs: "supabase functions logs --project-ref {project}"
+    status: "supabase projects list --output json"
+    deploy: "supabase link --project-ref {project} && supabase db push"
+    list_resources: "supabase projects list --output json"
+
+api:
+  base_url: "https://api.supabase.com/v1"
+  auth_header: "Authorization: Bearer {token}"
+  endpoints:
+    status: "GET /projects/{project}"
+    list_resources: "GET /projects"
+
+credentials:
+  key: supabase_access_token
+  prompt: "Supabase personal access token (supabase.com/dashboard/account/tokens)"

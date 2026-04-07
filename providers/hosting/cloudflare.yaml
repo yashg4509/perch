@@ -1,0 +1,25 @@
+# Docs: https://developers.cloudflare.com/api/ — Workers API under client/v4; Wrangler https://developers.cloudflare.com/workers/wrangler/
+name: cloudflare
+category: hosting
+deployable: true
+
+cli:
+  binary: wrangler
+  commands:
+    logs: "wrangler tail"
+    status: "wrangler whoami --json"
+    deploy: "wrangler deploy"
+    env_list: "wrangler secret list --json"
+    env_set: "wrangler secret put {key}"
+    list_resources: "wrangler deployments list --json"
+
+api:
+  base_url: "https://api.cloudflare.com/client/v4"
+  auth_header: "Authorization: Bearer {token}"
+  endpoints:
+    status: "GET /user/tokens/verify"
+    list_resources: "GET /accounts/{project}/workers/scripts"
+
+credentials:
+  key: cloudflare_api_token
+  prompt: "Cloudflare API token with Workers permissions (dash.cloudflare.com/profile/api-tokens)"

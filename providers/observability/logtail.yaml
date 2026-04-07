@@ -1,0 +1,15 @@
+# Docs: https://betterstack.com/docs/logs/api/list-all-existing-sources/
+name: logtail
+category: logging
+deployable: false
+
+api:
+  base_url: "https://telemetry.betterstack.com/api/v1"
+  auth_header: "Authorization: Bearer {token}"
+  endpoints:
+    status: "GET /sources"
+    list_resources: "GET /sources"
+
+credentials:
+  key: better_stack_telemetry_token
+  prompt: "Better Stack Telemetry API token (betterstack.com → Sources → Telemetry API)"

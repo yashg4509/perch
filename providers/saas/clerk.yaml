@@ -1,0 +1,14 @@
+# Docs: https://clerk.com/docs/reference/backend-api/tag/Users
+name: clerk
+category: auth
+deployable: false
+
+api:
+  base_url: "https://api.clerk.com/v1"
+  auth_header: "Authorization: Bearer {token}"
+  endpoints:
+    status: "GET /users?limit=1"
+
+credentials:
+  key: clerk_secret_key
+  prompt: "Clerk secret key (dashboard.clerk.com → API Keys)"

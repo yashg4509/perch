@@ -1,0 +1,15 @@
+# Docs: https://www.mongodb.com/docs/atlas/api/ — OAuth access token (service account) recommended
+name: mongodb
+category: db
+deployable: false
+
+api:
+  base_url: "https://cloud.mongodb.com/api/atlas/v2"
+  auth_header: "Authorization: Bearer {token}"
+  endpoints:
+    status: "GET /groups/{project}"
+    list_resources: "GET /groups"
+
+credentials:
+  key: mongodb_atlas_access_token
+  prompt: "MongoDB Atlas OAuth access token from a service account (cloud.mongodb.com → Access Manager)"

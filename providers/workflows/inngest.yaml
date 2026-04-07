@@ -1,0 +1,14 @@
+# Docs: https://www.inngest.com/docs/reference/rest-api — Cloud API host; GET / returns 200 for reachability; authenticated calls use signing keys per Inngest docs.
+name: inngest
+category: jobs
+deployable: false
+
+api:
+  base_url: "https://api.inngest.com"
+  auth_header: "Authorization: Bearer {token}"
+  endpoints:
+    status: "GET /"
+
+credentials:
+  key: inngest_signing_key
+  prompt: "Inngest signing key or API token (app.inngest.com) for authenticated management calls"

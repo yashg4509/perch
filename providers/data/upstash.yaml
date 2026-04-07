@@ -1,0 +1,15 @@
+# Docs: https://upstash.com/docs/devops/developer-api/redis/get_database — auth: Basic base64(email:api_key)
+name: upstash
+category: cache
+deployable: false
+
+api:
+  base_url: "https://api.upstash.com/v2"
+  auth_header: "Authorization: Basic {token}"
+  endpoints:
+    status: "GET /redis/database/{project}"
+    list_resources: "GET /redis/databases"
+
+credentials:
+  key: upstash_management_basic
+  prompt: "Base64(email:API_KEY) for Upstash Developer API (console.upstash.com → Account → API Keys)"

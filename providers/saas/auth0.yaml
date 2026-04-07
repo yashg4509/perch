@@ -1,0 +1,14 @@
+# Docs: https://auth0.com/docs/api/management/v2 — {project} is your Auth0 tenant domain (e.g. dev-abc.us.auth0.com)
+name: auth0
+category: auth
+deployable: false
+
+api:
+  base_url: "https://{project}/api/v2"
+  auth_header: "Authorization: Bearer {token}"
+  endpoints:
+    status: "GET /clients?fields=client_id&include_fields=true&per_page=1"
+
+credentials:
+  key: auth0_management_token
+  prompt: "Auth0 Management API token (manage.auth0.com → Applications → APIs → Auth0 Management API)"

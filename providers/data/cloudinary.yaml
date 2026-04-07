@@ -1,0 +1,14 @@
+# Docs: https://cloudinary.com/documentation/admin_api#usage — {project} is cloud_name
+name: cloudinary
+category: storage
+deployable: false
+
+api:
+  base_url: "https://api.cloudinary.com/v1_1/{project}"
+  auth_header: "Authorization: Basic {token}"
+  endpoints:
+    status: "GET /usage"
+
+credentials:
+  key: cloudinary_api_basic
+  prompt: "Base64(api_key:api_secret) for Cloudinary Admin API (console.cloudinary.com)"

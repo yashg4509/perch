@@ -65,14 +65,20 @@ Replace `./perch` with the path to your built binary.
 
 Nothing in this folder **requires** paid cloud accounts for basic CLI exercises: read-only nodes use **stubbed** JSON in the current milestone, and deployable nodes may show **placeholder** health until real API wiring is complete.
 
+The repo **bundles** many provider definitions under root [`providers/`](../providers/) (Vercel, Render, Supabase, Stripe, OpenAI, …). See **[docs/providers.md](../docs/providers.md)** for the **full list**, **init detection** rules (`package.json` + config files), and notes on **`next-auth`** / **`langchain` → `langsmith`**.
+
 To test **real** integrations when you are ready:
 
-| Service | Used for | What to configure |
-|---------|-----------|-------------------|
-| **Vercel** | `vercel` deployable node, API status | Create a project; set `project` in `perch.yaml` to match; add a token in `~/.perch/credentials` (key from `providers/vercel.yaml` → `vercel_token`) when API paths are used. |
-| **OpenAI** | `openai` read-only node | API key in `~/.perch/credentials` (`openai_api_key`) for live usage once the runtime calls the vendor API instead of stubs. |
+1. Set the resource fields in `perch.yaml` (`project`, `service`, …) to match your account.
+2. Add credentials under **`~/.perch/credentials`** using the **`credentials.key`** from the matching file under `providers/<category>/<name>.yaml` (JSON object of string keys to string secrets).
+3. Rebuild the binary after editing embedded YAML, or set **`PERCH_PROVIDERS_DIR`** to the repo’s `providers/` folder while iterating.
 
-Credentials live in **`~/.perch/credentials`** (JSON). Do **not** commit secrets; `perch.yaml` in examples uses placeholders like `YOUR_VERCEL_PROJECT`.
+| Example | Provider id | Credential key (see YAML) |
+|---------|-------------|---------------------------|
+| **Vercel** | `vercel` | `vercel_token` |
+| **OpenAI** | `openai` | `openai_api_key` |
+
+Do **not** commit secrets; example `perch.yaml` files use placeholders like `YOUR_VERCEL_PROJECT` or `CHANGE_ME`.
 
 ## Using as a separate repo
 
@@ -90,5 +96,5 @@ Follow the checklist in [scenarios/_template/README.md](scenarios/_template/READ
 ## Troubleshooting
 
 - **`unknown environment`** — Use `--env` that exists in `perch.yaml` (`production`, `staging`, `dev` in `full-stack`).
-- **`unknown provider`** — Rebuild perch after adding `providers/*.yaml`, or set `PERCH_PROVIDERS_DIR`.
+- **`unknown provider`** — Rebuild perch after adding or moving YAML under `providers/`, or set `PERCH_PROVIDERS_DIR`.
 - **TUI in automation** — The root `perch` command is interactive; automated tests use `internal/tui` package tests instead.

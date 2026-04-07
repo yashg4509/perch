@@ -1,0 +1,24 @@
+# Docs: https://docs.render.com/docs/api — https://api-docs.render.com/reference — CLI https://docs.render.com/docs/cli
+name: render
+category: hosting
+deployable: true
+
+cli:
+  binary: render
+  commands:
+    logs: "render logs -r {service} -o json --confirm --limit 100"
+    status: "render deploys list {service} -o json --confirm"
+    deploy: "render deploys create {service} -o json --confirm"
+    list_resources: "render services -o json --confirm"
+
+api:
+  base_url: "https://api.render.com/v1"
+  auth_header: "Authorization: Bearer {token}"
+  endpoints:
+    status: "GET /services/{service}"
+    env_list: "GET /services/{service}/env-vars"
+    list_resources: "GET /services"
+
+credentials:
+  key: render_api_key
+  prompt: "Render API key (dashboard.render.com → Account Settings → API Keys)"

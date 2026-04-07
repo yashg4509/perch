@@ -1,0 +1,14 @@
+# Docs: https://docs.sendgrid.com/api-reference/how-to-use-the-sendgrid-v3-api/authentication
+name: sendgrid
+category: email
+deployable: false
+
+api:
+  base_url: "https://api.sendgrid.com/v3"
+  auth_header: "Authorization: Bearer {token}"
+  endpoints:
+    status: "GET /user/profile"
+
+credentials:
+  key: sendgrid_api_key
+  prompt: "SendGrid API key (app.sendgrid.com/settings/api_keys)"

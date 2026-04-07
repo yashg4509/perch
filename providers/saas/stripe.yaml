@@ -1,0 +1,14 @@
+# Docs: https://stripe.com/docs/api — Balance https://stripe.com/docs/api/balance/balance_retrieve
+name: stripe
+category: payments
+deployable: false
+
+api:
+  base_url: "https://api.stripe.com/v1"
+  auth_header: "Authorization: Bearer {token}"
+  endpoints:
+    status: "GET /balance"
+
+credentials:
+  key: stripe_secret_key
+  prompt: "Stripe secret key (dashboard.stripe.com/apikeys)"
