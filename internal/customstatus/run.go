@@ -1,3 +1,6 @@
+// Package customstatus runs user-defined shell one-liners from perch.yaml for provider "custom".
+// Malicious or cloned perch.yaml can execute arbitrary commands as the invoking user — same trust
+// model as Makefile targets or local scripts; review before running in sensitive environments.
 package customstatus
 
 import (

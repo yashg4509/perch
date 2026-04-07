@@ -24,6 +24,8 @@ type Options struct {
 // If the process exits non-zero, err is nil and Result.ExitCode is set.
 // If the context is cancelled or times out before the process exits, err is non-nil.
 func Run(ctx context.Context, name string, args []string, opts Options) (*Result, error) {
+	// #nosec G204 — subprocess is the primitive for CLI integrations; callers must not pass
+	// untrusted shell strings as argv (user-defined commands use explicit sh -c in customstatus).
 	cmd := osexec.CommandContext(ctx, name, args...)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout

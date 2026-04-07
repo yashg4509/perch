@@ -166,6 +166,7 @@ func writePerchYAML(cmd *cobra.Command, perchPath string, cfg *config.Config, dr
 		}
 		return nil
 	}
+	// #nosec G306 — perch.yaml is non-secret stack metadata (see spec).
 	if err := os.WriteFile(perchPath, data, 0o644); err != nil {
 		return fmt.Errorf("write %s: %w", perchPath, err)
 	}
