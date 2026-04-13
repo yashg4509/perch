@@ -70,6 +70,7 @@ func WriteIfChanged(root string, opt Options) (written bool, inf detect.Inferenc
 	} else if err != nil && !os.IsNotExist(err) {
 		return false, inf, err
 	}
+	// #nosec G306 — perch.yaml is non-secret stack metadata meant to be committed (see spec).
 	if err := os.WriteFile(out, raw, 0o644); err != nil {
 		return false, inf, err
 	}

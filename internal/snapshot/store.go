@@ -45,7 +45,7 @@ func (s *Store) load() ([]Record, error) {
 }
 
 func (s *Store) saveAll(recs []Record) error {
-	if err := os.MkdirAll(filepath.Dir(s.path), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(s.path), 0o700); err != nil {
 		return err
 	}
 	raw, err := json.MarshalIndent(recs, "", "  ")
@@ -53,7 +53,7 @@ func (s *Store) saveAll(recs []Record) error {
 		return err
 	}
 	tmp := s.path + ".tmp"
-	if err := os.WriteFile(tmp, raw, 0o644); err != nil {
+	if err := os.WriteFile(tmp, raw, 0o600); err != nil {
 		return err
 	}
 	return os.Rename(tmp, s.path)

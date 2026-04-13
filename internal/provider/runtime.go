@@ -13,7 +13,9 @@ import (
 // into the endpoint path template and auth header. Only "GET ..." endpoint forms are supported here.
 func DoGETJSON(ctx context.Context, client *http.Client, spec *Spec, endpointKey string, vars map[string]string, dest any) error {
 	if client == nil {
-		client = http.DefaultClient
+		client = HTTPClientForAPI()
+	} else {
+		client = withSameHostRedirects(client)
 	}
 	rawEp, ok := spec.API.Endpoints[endpointKey]
 	if !ok {
@@ -24,16 +26,11 @@ func DoGETJSON(ctx context.Context, client *http.Client, spec *Spec, endpointKey
 		return err
 	}
 	path = SubstitutePlaceholders(path, vars)
-	base := strings.TrimSuffix(spec.API.BaseURL, "/")
-	u, err := url.Parse(base)
+	baseStr := strings.TrimSuffix(spec.API.BaseURL, "/")
+	full, err := joinBaseURL(baseStr, path)
 	if err != nil {
-		return fmt.Errorf("provider: base_url: %w", err)
+		return err
 	}
-	rel, err := url.Parse(path)
-	if err != nil {
-		return fmt.Errorf("provider: endpoint path: %w", err)
-	}
-	full := u.ResolveReference(rel)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, full.String(), nil)
 	if err != nil {
