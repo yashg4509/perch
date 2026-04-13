@@ -1,14 +1,16 @@
 #!/usr/bin/env bash
-# Tag and push a version so .github/workflows/release.yml runs GoReleaser (GitHub
-# release artifacts + Homebrew tap update).
+# Default releases: push/merge to main → .github/workflows/release.yml (tag + GoReleaser).
 #
-# Prerequisites:
-#   - Repo secret HOMEBREW_TAP_GITHUB_TOKEN on GitHub (PAT with push to homebrew-perch).
-#   - Remote yashg4509/homebrew-perch exists (GoReleaser publishes the Formula there).
+# This script is for local/off-CI use: manual semver tag + optional push, or --local
+# goreleaser with your own tokens.
+#
+# Prerequisites (for --local):
+#   - GITHUB_TOKEN + HOMEBREW_GITHUB_API_TOKEN (same role as HOMEBREW_TAP_GITHUB_TOKEN).
+#   - Remote yashg4509/homebrew-perch exists for Homebrew publish.
 #
 # Usage:
-#   ./scripts/release.sh v0.1.0              # tag + push (triggers CI release workflow)
-#   ./scripts/release.sh --local v0.1.0      # run goreleaser on this machine instead
+#   ./scripts/release.sh v0.1.0              # tag + push (does not trigger CI; use --local to publish)
+#   ./scripts/release.sh --local v0.1.0      # run goreleaser on this machine
 #   ./scripts/release.sh --dry-run v0.1.0    # show what would run
 
 set -euo pipefail
@@ -98,4 +100,4 @@ fi
 run git tag -a "$TAG" -m "Release $TAG"
 run git push origin "$TAG"
 
-echo "Pushed $TAG — GitHub Actions will run GoReleaser if the workflow and secrets are configured."
+echo "Pushed $TAG. Releases are normally created when this commit is on main (see .github/workflows/release.yml)."

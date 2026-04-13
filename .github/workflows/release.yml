@@ -1,21 +1,27 @@
 name: Release
 
-# Security: use a GitHub Environment named `release` with “Required reviewers”
-# (you + sharathb5). Secrets for that environment are only available after approval,
-# so a random tag push cannot publish binaries or update the Homebrew tap without a maintainer OK.
+# Runs when commits land on main. GoReleaser still needs a git tag, so this workflow
+# creates a unique semver tag (v0.0.<run> or v0.0.<run>-retry.<attempt>) then publishes
+# GitHub release assets + Homebrew tap.
 #
-# Also: Settings → Rules → Tag rules → protect `v*` so only trusted roles can create release tags.
+# Security: attach a GitHub Environment named `release` with “Required reviewers” so
+# secrets and publishing only run after you approve the deployment for that run.
+#
+# If you use tag protection rules for `v*`, allow the default GITHUB_TOKEN (or your
+# deploy bot) to create tags, or tag creation will fail.
 on:
   push:
-    tags:
-      - "v*"
+    branches: [main]
 
 permissions:
   contents: write
 
+concurrency:
+  group: goreleaser-${{ github.repository }}
+  cancel-in-progress: false
+
 jobs:
   goreleaser:
-    # Do not run on forks (no secrets; avoids noisy failed runs).
     if: github.repository == 'yashg4509/perch'
     runs-on: ubuntu-latest
     environment: release
@@ -25,6 +31,22 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Create release tag
+        id: tag
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          base="v0.0.${{ github.run_number }}"
+          if git rev-parse "$base" >/dev/null 2>&1; then
+            version="${base}-retry.${{ github.run_attempt }}"
+          else
+            version="$base"
+          fi
+          git tag -a "$version" -m "Release $version (main @ ${{ github.sha }})"
+          git push origin "refs/tags/$version"
+          echo "tag=$version" >> "$GITHUB_OUTPUT"
 
       - uses: actions/setup-go@v5
         with:
@@ -49,6 +71,4 @@ jobs:
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Fine-grained PAT or classic `repo` token with push access to yashg4509/homebrew-perch
-          # (the default GITHUB_TOKEN cannot push to another repository).
           HOMEBREW_GITHUB_API_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
