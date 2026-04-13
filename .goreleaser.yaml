@@ -6,6 +6,8 @@ project_name: perch
 before:
   hooks:
     - go mod tidy
+    # web/embed.go requires web/dist (same as CI and Makefile build).
+    - make web-build
 
 builds:
   - env:
