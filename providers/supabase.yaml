@@ -1,0 +1,13 @@
+name: supabase
+category: database
+deployable: false
+
+api:
+  base_url: "https://api.supabase.com"
+  auth_header: "Authorization: Bearer {token}"
+  endpoints:
+    status: "GET /v1/projects"
+
+credentials:
+  key: supabase_access_token
+  prompt: "Supabase access token (supabase.com/dashboard/account/tokens)"

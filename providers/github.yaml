@@ -1,0 +1,13 @@
+name: github
+category: git
+deployable: false
+
+api:
+  base_url: "https://api.github.com"
+  auth_header: "Authorization: Bearer {token}"
+  endpoints:
+    status: "GET /user"
+
+credentials:
+  key: github_token
+  prompt: "GitHub personal access token (github.com/settings/tokens)"

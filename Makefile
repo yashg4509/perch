@@ -1,7 +1,10 @@
-.PHONY: build test lint run provider-validate security
+.PHONY: build web-build test lint run provider-validate security
 
-build:
-	go build -o bin/perch ./cmd/perch
+web-build:
+	cd web && npm install && npm run build:embed
+
+build: web-build
+	go build -o perch ./cmd/perch
 
 test:
 	go test ./...
