@@ -22,6 +22,7 @@ jobs:
         with:
           go-version-file: go.mod
           cache: true
+          cache-dependency-path: go.sum
 
       # web/embed.go uses //go:embed all:dist — dist must exist before go vet/test compile the web package.
       - uses: actions/setup-node@v4
