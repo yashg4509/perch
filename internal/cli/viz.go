@@ -14,6 +14,7 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 
@@ -213,19 +214,36 @@ func spaHandler(root fs.FS) http.Handler {
 	})
 }
 
+// openBrowser launches the default browser for a perch viz URL.
+// Only http(s) URLs with host localhost or 127.0.0.1 are allowed (no shell, no remote hosts).
 func openBrowser(rawURL string) {
-	var u *url.URL
 	u, err := url.Parse(rawURL)
 	if err != nil {
 		return
 	}
-	s := u.String()
+	if u.Scheme != "http" && u.Scheme != "https" {
+		return
+	}
+	host := u.Hostname()
+	if host != "localhost" && host != "127.0.0.1" {
+		return
+	}
+	if p := u.Port(); p != "" {
+		if n, err := strconv.Atoi(p); err != nil || n < 1 || n > 65535 {
+			return
+		}
+	}
+	safe := u.String()
+
 	switch runtime.GOOS {
 	case "darwin":
-		_ = exec.Command("open", s).Start()
+		// #nosec G204 -- argv[0] is constant "open"; argv[1] is a validated local http(s) URL only.
+		_ = exec.Command("open", safe).Start()
 	case "windows":
-		_ = exec.Command("cmd", "/c", "start", "", s).Start()
+		// #nosec G204 -- fixed Windows shell invocation; URL validated as local-only above.
+		_ = exec.Command("cmd", "/c", "start", "", safe).Start()
 	default:
-		_ = exec.Command("xdg-open", s).Start()
+		// #nosec G204 -- argv[0] is constant "xdg-open"; argv[1] is a validated local http(s) URL only.
+		_ = exec.Command("xdg-open", safe).Start()
 	}
 }
