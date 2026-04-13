@@ -1,0 +1,15 @@
+# Docs: https://docs.anthropic.com/en/api/models-list
+name: anthropic
+category: ai
+deployable: false
+llm: true
+
+api:
+  base_url: "https://api.anthropic.com/v1"
+  auth_header: "x-api-key: {token}"
+  endpoints:
+    status: "GET /models"
+
+credentials:
+  key: anthropic_api_key
+  prompt: "Anthropic API key (console.anthropic.com); some calls also require anthropic-version header at runtime"

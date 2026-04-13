@@ -1,0 +1,23 @@
+# S3 data plane calls use SigV4; CLI is the practical path today. API block is a placeholder for future SigV4 support.
+# Docs: AWS CLI https://docs.aws.amazon.com/cli/latest/reference/s3api/head-bucket.html
+name: aws-s3
+category: storage
+deployable: true
+
+cli:
+  binary: aws
+  commands:
+    logs: "aws s3api list-buckets --output json"
+    status: "aws sts get-caller-identity --output json"
+    deploy: "aws s3api list-objects-v2 --bucket {project} --max-keys 1 --output json"
+    list_resources: "aws s3api list-buckets --output json"
+
+api:
+  base_url: "https://s3.amazonaws.com"
+  auth_header: "Authorization: Bearer {token}"
+  endpoints:
+    status: "GET /"
+
+credentials:
+  key: aws_placeholder_token
+  prompt: "Prefer AWS_ACCESS_KEY_ID + AWS_SECRET_ACCESS_KEY via aws configure; Bearer unused until SigV4 HTTP is wired"

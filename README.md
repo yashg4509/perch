@@ -49,13 +49,30 @@ Requires the Go version in [`go.mod`](go.mod).
 
 ---
 
+## Bundled providers
+
+The binary embeds **35** platform YAML files under [`providers/`](providers/) in **category subfolders** ([`providers/README.md`](providers/README.md)), plus root `_template.yaml` for new entries. `perch init` can suggest nodes when it finds matching **config files** or **`package.json` dependencies** (see [docs/providers.md](docs/providers.md) for the full mapping). IDs are lowercase with hyphens where needed (e.g. `upstash-qstash`, `aws-s3`).
+
+| Area | Provider IDs |
+|------|----------------|
+| **Hosting** | `vercel`, `netlify`, `fly`, `railway`, `cloudflare`, `render`, `firebase`, `supabase` |
+| **Data / cache / storage** | `neon`, `postgres`, `planetscale`, `mysql`, `mongodb`, `upstash`, `upstash-qstash`, `redis`, `pinecone`, `aws-s3`, `cloudinary` |
+| **Auth / payments / messaging** | `clerk`, `auth0`, `stripe`, `resend`, `sendgrid`, `twilio` |
+| **Jobs / realtime** | `trigger`, `inngest`, `pusher` |
+| **AI** | `openai`, `anthropic`, `langsmith` |
+| **Observability / analytics / logging** | `sentry`, `posthog`, `datadog`, `logtail` |
+
+**Special cases:** `custom` is not a YAML file—you declare `status` / optional `logs` commands in `perch.yaml`. **`next-auth`** is not auto-detected (self-hosted); **`langchain`** maps to **`langsmith`**. Secrets use keys named in each YAML’s `credentials` block under **`~/.perch/credentials`**.
+
+---
+
 ## Core ideas
 
 | Concept | Meaning |
 |--------|---------|
 | **Node** | One service in your stack (e.g. `web`, `api`). |
 | **Edge** | Dependency or data flow, e.g. `web -> api` in `perch.yaml`. |
-| **Provider** | How perch talks to a platform (Vercel, OpenAI, …), described in **`providers/*.yaml`**. |
+| **Provider** | How perch talks to a platform (Vercel, OpenAI, …), described in YAML under **`providers/`** (nested by category). |
 | **Environment** | Named slice of the same node names (`production`, `staging`, `dev`) with different resource IDs or `custom` commands. |
 
 ---
@@ -115,7 +132,7 @@ See **[CONTRIBUTING.md](CONTRIBUTING.md)** for Go version, **`make test` / `make
 |-------|----------------|
 | This **README** | Everyone: what perch is, how it fits together, install, config shape. |
 | **CONTRIBUTING.md** | Build, test, PRs, providers, changelog, tagging. |
-| **docs/** | Provider authoring and [agent skill](docs/add-perch-provider-skill.md) for drafting `providers/*.yaml`. |
+| **docs/** | [Bundled providers & init detection](docs/providers.md), [`providers/README.md`](providers/README.md) layout, and [agent skill](docs/add-perch-provider-skill.md) for drafting new YAML. |
 | **examples/README.md** | Trying the CLI safely with sample projects. |
 | **CHANGELOG.md** | Release notes. |
 | **SECURITY.md** / **CODE_OF_CONDUCT.md** | Reporting issues and community expectations. |

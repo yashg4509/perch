@@ -1,0 +1,26 @@
+# Docs: https://docs.machines.dev/ Machines API; CLI https://fly.io/docs/flyctl/
+name: fly
+category: hosting
+deployable: true
+
+cli:
+  binary: fly
+  commands:
+    logs: "fly logs -a {service}"
+    status: "fly status -a {service} --json"
+    deploy: "fly deploy -a {service}"
+    rollback: "fly releases -a {service} --json"
+    env_list: "fly secrets list -a {service} --json"
+    env_set: "fly secrets set {key}={value} -a {service}"
+    list_resources: "fly apps list --json"
+
+api:
+  base_url: "https://api.machines.dev/v1"
+  auth_header: "Authorization: Bearer {token}"
+  endpoints:
+    status: "GET /apps/{service}"
+    list_resources: "GET /apps?org_slug=personal"
+
+credentials:
+  key: fly_api_token
+  prompt: "Fly.io deploy token or API token (fly.io/dashboard/personal_access_tokens)"

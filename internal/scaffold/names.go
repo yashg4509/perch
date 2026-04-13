@@ -32,7 +32,7 @@ func AssignNodeNames(providers []string) map[string]string {
 			try("db", p)
 		case "stripe":
 			try("payments", p)
-		case "openai", "anthropic":
+		case "openai", "anthropic", "langsmith":
 			try("llm", p)
 		}
 	}

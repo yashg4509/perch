@@ -1,0 +1,14 @@
+# Docs: https://pusher.com/docs/channels/library_auth_reference/rest-api — requests require signed query parameters (auth_key, auth_timestamp, auth_version, auth_signature).
+name: pusher
+category: realtime
+deployable: false
+
+api:
+  base_url: "https://api.pusher.com"
+  auth_header: "Authorization: Bearer {token}"
+  endpoints:
+    status: "GET /apps/{project}/channels"
+
+credentials:
+  key: pusher_http_api_token
+  prompt: "Pusher Channels: use app id as {project}; signing query params required for live calls (see Pusher HTTP API docs)"

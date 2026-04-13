@@ -10,10 +10,10 @@ import (
 	"testing"
 )
 
-// T8-002: providers/vercel.yaml drives real DoGETJSON path (httptest only, no network).
+// T8-002: providers/hosting/vercel.yaml drives real DoGETJSON path (httptest only, no network).
 func TestVercelYAML_statusEndpoint_dispatch(t *testing.T) {
 	root := repoRoot(t)
-	raw, err := os.ReadFile(filepath.Join(root, "providers", "vercel.yaml"))
+	raw, err := os.ReadFile(filepath.Join(root, "providers", "hosting", "vercel.yaml"))
 	if err != nil {
 		t.Fatal(err)
 	}

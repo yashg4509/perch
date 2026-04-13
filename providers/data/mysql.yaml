@@ -1,0 +1,15 @@
+# Prisma `provider = mysql` maps here; PlanetScale HTTP API (MySQL-compatible hosting)
+name: mysql
+category: db
+deployable: false
+
+api:
+  base_url: "https://api.planetscale.com/v1"
+  auth_header: "Authorization: Bearer {token}"
+  endpoints:
+    status: "GET /organizations/{project}/databases"
+    list_resources: "GET /organizations"
+
+credentials:
+  key: planetscale_service_token
+  prompt: "PlanetScale service token; {project} is your PlanetScale organization name"

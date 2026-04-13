@@ -18,7 +18,7 @@ func TestPackageJSONSignals_table(t *testing.T) {
 		{`{"dependencies":{"@anthropic-ai/sdk":"^0.10"}}`, map[string]struct{}{"anthropic": {}}},
 		{`{"dependencies":{"@pinecone-database/pinecone":"^2"}}`, map[string]struct{}{"pinecone": {}}},
 		{`{"dependencies":{"@clerk/nextjs":"^5"}}`, map[string]struct{}{"clerk": {}}},
-		{`{"dependencies":{"next-auth":"^4"}}`, map[string]struct{}{"nextauth": {}}},
+		{`{"dependencies":{"langchain":"^0.2"}}`, map[string]struct{}{"langsmith": {}}},
 	}
 	for i, tc := range cases {
 		root := t.TempDir()

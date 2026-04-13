@@ -1,0 +1,14 @@
+# Docs: https://www.twilio.com/docs/usage/api/account — Fetch Account
+name: twilio
+category: sms
+deployable: false
+
+api:
+  base_url: "https://api.twilio.com/2010-04-01"
+  auth_header: "Authorization: Basic {token}"
+  endpoints:
+    status: "GET /Accounts/{project}.json"
+
+credentials:
+  key: twilio_credentials_basic
+  prompt: "Twilio Account SID and auth token as HTTP Basic (base64(AccountSID:AuthToken)); set {project} in perch.yaml to your Account SID"

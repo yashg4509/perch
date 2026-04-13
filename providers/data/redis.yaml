@@ -1,0 +1,14 @@
+# Docs: https://redis.io/docs/latest/operate/rc/api/get-started/use-rest-api/ — requires x-api-key and x-api-secret-key; single-header runtimes may need a future extension.
+name: redis
+category: cache
+deployable: false
+
+api:
+  base_url: "https://api.redislabs.com/v1"
+  auth_header: "x-api-key: {token}"
+  endpoints:
+    status: "GET /payment-methods"
+
+credentials:
+  key: redis_cloud_account_key
+  prompt: "Redis Cloud account API key (redis.io/cloud → Account → API); also need x-api-secret-key for full access (see vendor docs)"

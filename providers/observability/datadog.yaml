@@ -1,0 +1,14 @@
+# Docs: https://docs.datadoghq.com/api/latest/authentication/
+name: datadog
+category: observability
+deployable: false
+
+api:
+  base_url: "https://api.datadoghq.com/api/v1"
+  auth_header: "DD-API-KEY: {token}"
+  endpoints:
+    status: "GET /validate"
+
+credentials:
+  key: datadog_api_key
+  prompt: "Datadog API key (app.datadoghq.com → Organization Settings → API Keys); DD-APPLICATION-KEY may be required for some endpoints at runtime"

@@ -1,0 +1,15 @@
+# Docs: https://api-docs.neon.tech/reference/listprojects — base https://console.neon.tech/api/v2
+name: neon
+category: db
+deployable: false
+
+api:
+  base_url: "https://console.neon.tech/api/v2"
+  auth_header: "Authorization: Bearer {token}"
+  endpoints:
+    status: "GET /projects/{project}"
+    list_resources: "GET /projects"
+
+credentials:
+  key: neon_api_key
+  prompt: "Neon API key (console.neon.tech → Account settings → API keys)"

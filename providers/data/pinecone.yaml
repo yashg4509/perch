@@ -1,0 +1,15 @@
+# Docs: https://docs.pinecone.io/reference/api/2024-07/control-plane/list_indexes
+name: pinecone
+category: vector-db
+deployable: false
+
+api:
+  base_url: "https://api.pinecone.io"
+  auth_header: "Api-Key: {token}"
+  endpoints:
+    status: "GET /indexes/{project}"
+    list_resources: "GET /indexes"
+
+credentials:
+  key: pinecone_api_key
+  prompt: "Pinecone API key (app.pinecone.io); {project} is the index name. Some calls require X-Pinecone-Api-Version at runtime"

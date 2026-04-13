@@ -1,0 +1,15 @@
+# Docs: https://upstash.com/docs/qstash — API base https://qstash.upstash.io/v2
+name: upstash-qstash
+category: queue
+deployable: false
+
+api:
+  base_url: "https://qstash.upstash.io/v2"
+  auth_header: "Authorization: Bearer {token}"
+  endpoints:
+    status: "GET /queues"
+    list_resources: "GET /queues"
+
+credentials:
+  key: qstash_token
+  prompt: "QStash token (console.upstash.com → QStash → Signing Keys)"

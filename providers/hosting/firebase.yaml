@@ -1,0 +1,24 @@
+# Docs: https://firebase.google.com/docs/reference/rest/auth — Management https://firebase.google.com/docs/projects/api/reference/rest
+# CLI: https://firebase.google.com/docs/cli
+name: firebase
+category: hosting
+deployable: true
+
+cli:
+  binary: firebase
+  commands:
+    logs: "firebase functions:log --project {project}"
+    status: "firebase projects:list --json"
+    deploy: "firebase deploy --project {project}"
+    list_resources: "firebase projects:list --json"
+
+api:
+  base_url: "https://firebase.googleapis.com/v1beta1"
+  auth_header: "Authorization: Bearer {token}"
+  endpoints:
+    status: "GET /projects/{project}"
+    list_resources: "GET /projects"
+
+credentials:
+  key: firebase_access_token
+  prompt: "Google OAuth2 access token with Firebase/Google Cloud scope (console.firebase.google.com → Project settings)"

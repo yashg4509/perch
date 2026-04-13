@@ -1,0 +1,15 @@
+# Docs: https://docs.sentry.io/api/users/list-your-organizations/
+name: sentry
+category: observability
+deployable: false
+
+api:
+  base_url: "https://sentry.io/api/0"
+  auth_header: "Authorization: Bearer {token}"
+  endpoints:
+    status: "GET /organizations/"
+    list_resources: "GET /organizations/"
+
+credentials:
+  key: sentry_auth_token
+  prompt: "Sentry auth token with org:read (sentry.io → Settings → Auth Tokens)"

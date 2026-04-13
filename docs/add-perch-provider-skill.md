@@ -7,12 +7,12 @@ description: Researches a cloud or SaaS platform and drafts a new perch provider
 
 ## Goal
 
-Produce **one new file** `providers/<name>.yaml` that matches the schema used by this repo, without inventing URLs or CLI flags. Every path and command string should be **traceable to an official doc** (or the vendor CLI `--help`).
+Produce **one new file** `providers/<category>/<name>.yaml` (see [`providers/README.md`](../providers/README.md) for categories) that matches the schema used by this repo, without inventing URLs or CLI flags. Every path and command string should be **traceable to an official doc** (or the vendor CLI `--help`). If you add a **new** top-level folder under `providers/`, extend [`providers/embed.go`](../providers/embed.go) with another `//go:embed` line.
 
 ## Before writing YAML
 
-1. Read [docs/providers.md](./providers.md) and copy [`providers/_template.yaml`](../providers/_template.yaml) → `providers/<name>.yaml`.
-2. Skim [`providers/vercel.yaml`](../providers/vercel.yaml) or [`providers/openai.yaml`](../providers/openai.yaml) for shape and tone; use **Runtime** notes in [providers.md](./providers.md) for placeholders and HTTP/CLI wiring.
+1. Read [docs/providers.md](./providers.md) (bundled catalog + init detection). If the platform is **already** listed there, extend the existing YAML under `providers/<category>/` instead of duplicating. Otherwise copy [`providers/_template.yaml`](../providers/_template.yaml) → `providers/<category>/<name>.yaml`.
+2. Skim [`providers/hosting/vercel.yaml`](../providers/hosting/vercel.yaml) or [`providers/ai/openai.yaml`](../providers/ai/openai.yaml) for shape and tone; use **Runtime** notes in [providers.md](./providers.md) for placeholders and HTTP/CLI wiring.
 
 ## Research checklist (use the web or local CLI help)
 
@@ -53,7 +53,7 @@ If the provider should be easy to demo without secrets, add or extend a row unde
 
 Use this in a new session with **any** coding agent after opening this repository:
 
-> Follow the instructions in `docs/add-perch-provider-skill.md` (read that file in full). I want a new provider named **`<platform>`**. Search official docs for REST base URL, authentication, and the smallest set of endpoints for **status** (and **logs** if deployable). Search for the official CLI and commands for **status**, **logs**, **deploy**, **list projects**, and **env list**. Draft `providers/<platform>.yaml`, then list which doc URLs you used for each major field. Do not invent paths.
+> Follow the instructions in `docs/add-perch-provider-skill.md` (read that file in full). I want a new provider named **`<platform>`** in the appropriate `providers/<category>/` folder (see `providers/README.md`). Search official docs for REST base URL, authentication, and the smallest set of endpoints for **status** (and **logs** if deployable). Search for the official CLI and commands for **status**, **logs**, **deploy**, **list projects**, and **env list**. Draft `providers/<category>/<platform>.yaml` and update `providers/embed.go` if you add a new category directory, then list which doc URLs you used for each major field. Do not invent paths.
 
 ## Using this workflow in your environment (agent-agnostic)
 
