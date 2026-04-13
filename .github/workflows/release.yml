@@ -64,6 +64,15 @@ jobs:
         working-directory: web
         run: npm ci && npm run build:embed
 
+      - name: Require Homebrew tap PAT
+        env:
+          HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
+        run: |
+          if [ -z "$HOMEBREW_TAP_GITHUB_TOKEN" ]; then
+            echo "::error::Set secret HOMEBREW_TAP_GITHUB_TOKEN (classic PAT with repo scope, or fine-grained PAT with Contents write on yashg4509/homebrew-perch). Add it on the release environment or as a repository secret. The default GITHUB_TOKEN cannot push to another repository."
+            exit 1
+          fi
+
       - uses: goreleaser/goreleaser-action@v6
         with:
           distribution: goreleaser

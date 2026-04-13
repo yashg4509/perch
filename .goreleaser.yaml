@@ -36,11 +36,14 @@ checksum:
 changelog:
   disable: true
 
+# Requires a public GitHub repo github.com/yashg4509/homebrew-perch (create empty if 404).
 brews:
   - name: perch
     repository:
       owner: yashg4509
       name: homebrew-perch
+      # Actions GITHUB_TOKEN cannot push to another repo; use PAT via HOMEBREW_GITHUB_API_TOKEN.
+      token: "{{ .Env.HOMEBREW_GITHUB_API_TOKEN }}"
     directory: Formula
     commit_msg_template: "brew: {{ .ProjectName }} {{ .Tag }}"
     homepage: "https://github.com/yashg4509/perch"
