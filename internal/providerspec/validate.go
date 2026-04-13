@@ -2,8 +2,8 @@ package providerspec
 
 import (
 	"fmt"
+	"io/fs"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -61,7 +61,8 @@ func requireMap(root map[string]any, key, providerName string) error {
 
 // ValidateProviderYAMLDir validates every *.yaml / *.yml under dir (recursive).
 func ValidateProviderYAMLDir(dir string) error {
-	return filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
+	fsys := os.DirFS(dir)
+	return fs.WalkDir(fsys, ".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -72,7 +73,7 @@ func ValidateProviderYAMLDir(dir string) error {
 		if !strings.HasSuffix(name, ".yaml") && !strings.HasSuffix(name, ".yml") {
 			return nil
 		}
-		data, err := os.ReadFile(path)
+		data, err := fs.ReadFile(fsys, path)
 		if err != nil {
 			return err
 		}

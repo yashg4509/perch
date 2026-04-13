@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
-	"path/filepath"
 	"strings"
 )
 
@@ -17,47 +16,7 @@ type Registry struct {
 // LoadRegistry reads every *.yaml / *.yml under dir (recursive), skipping files whose
 // basename starts with '_' (e.g. _template.yaml).
 func LoadRegistry(dir string) (*Registry, error) {
-	reg := &Registry{ByName: make(map[string]*Spec)}
-	var errs []error
-	err := filepath.WalkDir(dir, func(path string, d os.DirEntry, walkErr error) error {
-		if walkErr != nil {
-			return walkErr
-		}
-		if d.IsDir() {
-			return nil
-		}
-		name := d.Name()
-		if !strings.HasSuffix(name, ".yaml") && !strings.HasSuffix(name, ".yml") {
-			return nil
-		}
-		base := strings.TrimSuffix(strings.TrimSuffix(name, ".yaml"), ".yml")
-		if strings.HasPrefix(base, "_") {
-			return nil
-		}
-		raw, err := os.ReadFile(path)
-		if err != nil {
-			errs = append(errs, fmt.Errorf("%s: %w", path, err))
-			return nil
-		}
-		spec, err := ParseProviderYAML(raw)
-		if err != nil {
-			errs = append(errs, fmt.Errorf("%s: %w", path, err))
-			return nil
-		}
-		if _, dup := reg.ByName[spec.Name]; dup {
-			errs = append(errs, fmt.Errorf("%s: duplicate provider name %q", path, spec.Name))
-			return nil
-		}
-		reg.ByName[spec.Name] = spec
-		return nil
-	})
-	if err != nil {
-		return nil, err
-	}
-	if len(errs) > 0 {
-		return nil, errors.Join(errs...)
-	}
-	return reg, nil
+	return LoadRegistryFS(os.DirFS(dir))
 }
 
 // LoadRegistryFS reads every *.yaml / *.yml under fsys (recursive), skipping basenames
