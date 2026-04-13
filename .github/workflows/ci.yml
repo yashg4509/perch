@@ -22,6 +22,18 @@ jobs:
         with:
           go-version-file: go.mod
           cache: true
+          cache-dependency-path: go.sum
+
+      # web/embed.go uses //go:embed all:dist — dist must exist before go vet/test compile the web package.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Build web UI (go:embed)
+        working-directory: web
+        run: npm ci && npm run build:embed
 
       - name: Format (gofmt)
         run: test -z "$(gofmt -l .)"
