@@ -1,71 +1,25 @@
-# Rich demo stack: more nodes + edges for perch viz / graph --json.
-# Replace YOUR_* placeholders when exercising live provider APIs.
-# Same node names in every environment (required for global edges).
+# Example stack: same node names in every environment (required for global edges).
+# Replace YOUR_VERCEL_* with real project names when testing live Vercel APIs.
 name: perch-example-full-stack
 environments:
   production:
-    repo:
-      provider: github
-      project: demo-org/perch-demo
     web:
       provider: vercel
       project: YOUR_VERCEL_PROJECT
-    api:
-      provider: render
-      service: YOUR_RENDER_API_SERVICE
-    worker:
-      provider: render
-      service: YOUR_RENDER_WORKER_SERVICE
-    db:
-      provider: supabase
-      project: YOUR_SUPABASE_PROJECT_REF
     llm:
       provider: openai
   staging:
-    repo:
-      provider: github
-      project: demo-org/perch-demo-staging
     web:
       provider: vercel
       project: YOUR_VERCEL_PROJECT_STAGING
-    api:
-      provider: render
-      service: YOUR_RENDER_API_SERVICE_STAGING
-    worker:
-      provider: render
-      service: YOUR_RENDER_WORKER_SERVICE_STAGING
-    db:
-      provider: supabase
-      project: YOUR_SUPABASE_PROJECT_REF_STAGING
     llm:
       provider: openai
   dev:
-    repo:
-      provider: custom
-      status: "exit 0"
-      logs: "echo 'Demo: Git pushes / CI'"
     web:
       provider: custom
       status: "curl -sf http://127.0.0.1:18080/health >/dev/null"
       logs: "echo 'Example: tail your local app log instead'"
-    api:
-      provider: custom
-      status: "exit 0"
-      logs: "echo 'Demo: API process'"
-    worker:
-      provider: custom
-      status: "exit 0"
-      logs: "echo 'Demo: background worker'"
-    db:
-      provider: custom
-      status: "exit 0"
-      logs: "echo 'Demo: local Postgres / Supabase'"
     llm:
       provider: openai
 edges:
-  - repo -> web
-  - web -> api
-  - web -> worker
-  - api -> db
-  - api -> llm
-  - worker -> db
+  - web -> llm
