@@ -5,6 +5,7 @@ import "embed"
 // Bundled provider specs live in category subfolders; _template stays at repo root for copy-paste.
 //
 //go:embed _template.yaml
+//go:embed github.yaml
 //go:embed hosting/*.yaml
 //go:embed data/*.yaml
 //go:embed saas/*.yaml
