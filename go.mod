@@ -2,6 +2,8 @@ module github.com/yashg4509/perch
 
 go 1.24.4
 
+toolchain go1.25.9
+
 require (
 	github.com/charmbracelet/bubbletea v1.3.4
 	github.com/charmbracelet/lipgloss v1.1.0
