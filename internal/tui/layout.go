@@ -118,3 +118,8 @@ func min(a, b int) int {
 func visibleWidth(s string) int {
 	return ansi.StringWidth(s)
 }
+
+// VisibleLineWidth returns the rendered width of s accounting for ANSI styling.
+func VisibleLineWidth(s string) int {
+	return visibleWidth(s)
+}

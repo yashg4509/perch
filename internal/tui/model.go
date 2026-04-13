@@ -184,6 +184,18 @@ func (m *StackModel) navigate(ks string) {
 	m.selIdx = (m.selIdx + delta + len(m.focusNames)) % len(m.focusNames)
 }
 
+// WindowWidth returns the last known terminal width (after WindowSizeMsg or SetWindowSize).
+func (m *StackModel) WindowWidth() int { return m.width }
+
+// WindowHeight returns the last known terminal height.
+func (m *StackModel) WindowHeight() int { return m.height }
+
+// SetWindowSize sets dimensions (for tests and programmatic embedding).
+func (m *StackModel) SetWindowSize(w, h int) { m.width, m.height = w, h }
+
+// CurrentGraph returns the graph being rendered (may change with env switching).
+func (m *StackModel) CurrentGraph() *graph.Graph { return m.g }
+
 // Init implements tea.Model.
 func (m *StackModel) Init() tea.Cmd {
 	if m.loadErr != nil || m.g == nil {

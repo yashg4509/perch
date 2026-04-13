@@ -56,12 +56,13 @@ func Collect(ctx context.Context, cfg *config.Config, env string, reg *provider.
 		if err != nil {
 			return nil, err
 		}
-		out.Nodes = append(out.Nodes, nodeReportFromStatus(name, n.Provider, st))
+		out.Nodes = append(out.Nodes, NodeReportFromStatus(name, n.Provider, st))
 	}
 	return out, nil
 }
 
-func nodeReportFromStatus(name, prov string, st provider.NodeStatus) NodeReport {
+// NodeReportFromStatus maps provider status into a row for reports and external tests.
+func NodeReportFromStatus(name, prov string, st provider.NodeStatus) NodeReport {
 	return NodeReport{
 		Name:         name,
 		Provider:     prov,
