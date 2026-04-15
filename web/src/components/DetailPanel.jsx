@@ -1,7 +1,6 @@
 import { X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { mockDeployments, mockLogs } from '../data/mock.js'
 import { DeployRow } from './DeployRow.jsx'
 
 function providerTitle(provider) {
@@ -19,6 +18,60 @@ function metaLookup(meta, key) {
   return meta?.find((m) => m.key === key)?.value ?? '—'
 }
 
+/** @param {{ key: string, value: string }[] | undefined} meta */
+function metaValue(meta, key) {
+  const v = meta?.find((m) => m.key === key)?.value
+  if (v == null) {
+    return ''
+  }
+  return String(v)
+}
+
+/**
+ * @param {{ meta?: { key: string, value: string }[], recentErrors?: string[] }} node
+ * @param {string} environment
+ */
+function buildDeploymentRows(node, environment) {
+  if (!node) {
+    return []
+  }
+  const sha = metaValue(node.meta, 'last_deploy.sha').trim()
+  const ago = metaValue(node.meta, 'last_deploy.ago').trim()
+  const hasLastDeploy = sha !== '' || ago !== ''
+
+  const rows = []
+  if (hasLastDeploy) {
+    rows.push({
+      id: sha !== '' ? sha.slice(0, 7) : 'deploy',
+      env: environment,
+      current: true,
+      branch: '—',
+      commit: sha !== '' ? sha : '—',
+      date: ago !== '' ? ago : '—',
+      duration: '—',
+    })
+  }
+
+  const errs = Array.isArray(node.recentErrors) ? node.recentErrors : []
+  errs.forEach((msg, i) => {
+    const t = String(msg ?? '').trim()
+    if (t === '') {
+      return
+    }
+    rows.push({
+      id: `recent-${i}-${t.slice(0, 12)}`,
+      env: 'Recent activity',
+      current: false,
+      branch: '—',
+      commit: t,
+      date: '—',
+      duration: '—',
+    })
+  })
+
+  return rows
+}
+
 const statusLabel = {
   healthy: 'healthy',
   degraded: 'degraded',
@@ -32,6 +85,7 @@ export function DetailPanel({ node, environment }) {
   const { stackName, nodeId } = useParams()
   const navigate = useNavigate()
   const [tab, setTab] = useState('deployments')
+  const [logsCopied, setLogsCopied] = useState(false)
 
   const close = () => {
     navigate(`/stack/${stackName}`)
@@ -45,12 +99,26 @@ export function DetailPanel({ node, environment }) {
     return () => window.removeEventListener('keydown', onKey)
   }, [navigate, stackName])
 
-  const deployments = node ? mockDeployments[node.id] ?? [] : []
-  const logs = node ? mockLogs[node.id] ?? [] : []
+  const deployments = node ? buildDeploymentRows(node, environment) : []
+  const logsCmd = node?.logs != null ? String(node.logs).trim() : ''
+  const hasLogsCommand = logsCmd !== ''
 
   const region = node ? metaLookup(node.meta, 'region') : '—'
   const branch = node ? metaLookup(node.meta, 'branch') : '—'
   const st = node ? statusLabel[node.status] ?? node.status : '—'
+
+  const copyLogsCommand = async () => {
+    if (!hasLogsCommand) {
+      return
+    }
+    try {
+      await navigator.clipboard.writeText(logsCmd)
+      setLogsCopied(true)
+      window.setTimeout(() => setLogsCopied(false), 2000)
+    } catch {
+      setLogsCopied(false)
+    }
+  }
 
   return (
     <aside className="flex h-full w-[300px] shrink-0 flex-col border-l border-gray-200 bg-white">
@@ -98,7 +166,7 @@ export function DetailPanel({ node, environment }) {
 
       {!node && (
         <div className="border-b border-gray-200 px-3 py-3 text-sm text-gray-500">
-          No node exists for this id in the mock graph.
+          No node exists for this id in the stack graph.
         </div>
       )}
 
@@ -126,27 +194,33 @@ export function DetailPanel({ node, environment }) {
           <div className="min-h-0 flex-1 overflow-y-auto">
             {tab === 'deployments' && (
               <div>
-                {deployments.map((d) => (
-                  <DeployRow key={d.id} deployment={d} />
-                ))}
+                {deployments.length === 0 ? (
+                  <p className="p-3 text-sm text-gray-500">No deployment data</p>
+                ) : (
+                  deployments.map((d, i) => <DeployRow key={`${node.id}-row-${i}`} deployment={d} />)
+                )}
               </div>
             )}
 
             {tab === 'logs' && (
-              <div className="space-y-1 p-3 font-mono text-xs leading-relaxed">
-                {logs.map((line, i) => {
-                  const levelClass =
-                    line.level === 'warn'
-                      ? 'text-amber-500'
-                      : line.level === 'error'
-                        ? 'text-red-500'
-                        : 'text-gray-500'
-                  return (
-                    <div key={`${line.ts}-${i}`} className={levelClass}>
-                      [{line.ts}] [{line.level}] {line.msg}
-                    </div>
-                  )
-                })}
+              <div className="p-3 text-sm text-gray-700">
+                {hasLogsCommand ? (
+                  <>
+                    <p className="text-xs text-gray-600">Run this command to tail logs:</p>
+                    <pre className="mt-2 max-h-[40vh] overflow-auto whitespace-pre-wrap break-all rounded-md border border-gray-200 bg-gray-50 p-2 font-mono text-[11px] leading-relaxed text-gray-900">
+                      {logsCmd}
+                    </pre>
+                    <button
+                      type="button"
+                      onClick={() => void copyLogsCommand()}
+                      className="mt-2 rounded-md border border-gray-300 bg-white px-2.5 py-1 text-xs font-medium text-gray-800 hover:bg-gray-50"
+                    >
+                      {logsCopied ? 'Copied' : 'Copy'}
+                    </button>
+                  </>
+                ) : (
+                  <p className="text-sm text-gray-500">No log command configured</p>
+                )}
               </div>
             )}
 
