@@ -137,6 +137,9 @@ export function mapGraphToNodes(graphJson, statusJson) {
       url: pickUrl(gn),
       status: deriveStatus(gn, st),
       meta: buildMeta(gn, st),
+      logs: gn.logs != null ? String(gn.logs) : '',
+      statusCommand: gn.status != null ? String(gn.status) : '',
+      recentErrors: Array.isArray(st?.recent_errors) ? st.recent_errors : [],
       tabs: tabsForProvider(provider),
     }
   })
