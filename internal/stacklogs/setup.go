@@ -2,6 +2,7 @@ package stacklogs
 
 import (
 	"context"
+	"log"
 	"os/exec"
 	"strings"
 	"time"
@@ -43,15 +44,32 @@ func autoSetup(ctx context.Context, spec *provider.Spec) (bool, string) {
 		return false, "auth_failed"
 	}
 
+	persistAutoSetupToken(spec)
+	return true, "success"
+}
+
+// persistAutoSetupToken saves a token from the provider auth file or env var into the credential store.
+func persistAutoSetupToken(spec *provider.Spec) {
+	if spec == nil {
+		return
+	}
+	key := strings.TrimSpace(spec.Credentials.Key)
+	if key == "" {
+		return
+	}
 	tok, ok := readAuthFileToken(spec)
 	if !ok || tok == "" {
-		return false, "auth_failed"
+		if ev := strings.TrimSpace(spec.Credentials.EnvVar); ev != "" {
+			tok = strings.TrimSpace(platformHooks.getenv(ev))
+		}
+	}
+	if tok == "" {
+		return
 	}
 	store := platformHooks.credentialsStore()
-	if err := store.Set(spec.Credentials.Key, tok); err != nil {
-		return false, "auth_failed"
+	if err := store.Set(key, tok); err != nil {
+		log.Printf("stacklogs: auto_setup: failed to persist token: %v", err)
 	}
-	return true, "success"
 }
 
 func installCommand(spec *provider.Spec) (cmd, pkgManager string) {

@@ -77,6 +77,57 @@ func TestAutoSetup_skipsInstallWhenBinaryOnPath(t *testing.T) {
 	}
 }
 
+func TestAutoSetup_persistsTokenFromEnvWhenAuthFileMissing(t *testing.T) {
+	restore := swapSetupHooks(t)
+	defer restore()
+	restorePlatform := swapPlatformHooks(t)
+	defer restorePlatform()
+
+	tmp := t.TempDir()
+	platformHooks.userHomeDir = func() (string, error) { return tmp, nil }
+	platformHooks.readFile = func(string) ([]byte, error) { return nil, os.ErrNotExist }
+	platformHooks.getenv = func(k string) string {
+		if k == "VERCEL_TOKEN" {
+			return "env_after_login"
+		}
+		return ""
+	}
+	credPath := filepath.Join(tmp, ".perch", "credentials")
+	platformHooks.credentialsStore = func() *credentials.Store {
+		return credentials.NewStoreAt(credPath)
+	}
+
+	setupHooks.lookPath = func(name string) (string, error) {
+		if name == "vercel" {
+			return "/usr/bin/vercel", nil
+		}
+		return "", errNotFound
+	}
+	setupHooks.runShell = func(context.Context, string, time.Duration) error { return nil }
+
+	spec := &provider.Spec{
+		Name: "vercel",
+		CLI: &provider.CLISpec{
+			Binary:  "vercel",
+			Install: map[string]string{"npm": "npm install -g vercel"},
+			AuthCmd: "vercel login",
+		},
+		Credentials: provider.CredentialsSpec{
+			Key:    "vercel_token",
+			EnvVar: "VERCEL_TOKEN",
+		},
+	}
+
+	ok, result := autoSetup(context.Background(), spec)
+	if !ok || result != "success" {
+		t.Fatalf("ok=%v result=%q", ok, result)
+	}
+	tok, found, err := credentials.NewStoreAt(credPath).Get("vercel_token")
+	if err != nil || !found || tok != "env_after_login" {
+		t.Fatalf("store token=%q found=%v err=%v", tok, found, err)
+	}
+}
+
 func TestAutoSetup_returnsFalseWhenInstallEmpty(t *testing.T) {
 	restore := swapSetupHooks(t)
 	defer restore()
