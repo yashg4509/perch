@@ -1,6 +1,7 @@
 import { X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { buildErrorPrompt, isErroredNode, openInAIWithFallback } from '../lib/aiHandoff.js'
 import { DeployRow } from './DeployRow.jsx'
 
 function providerTitle(provider) {
@@ -103,12 +104,41 @@ function CopyBlock({ label, text, copied, onCopy }) {
   )
 }
 
+async function fetchLogs(env, nodeName) {
+  const url = `/api/logs?env=${encodeURIComponent(env)}&node=${encodeURIComponent(nodeName)}`
+  const res = await fetch(url, { headers: { Accept: 'application/json' } })
+  const text = await res.text()
+  let body = null
+  try {
+    body = text !== '' ? JSON.parse(text) : null
+  } catch {
+    body = null
+  }
+  if (!res.ok) {
+    const msg = body?.error ?? res.statusText ?? 'request failed'
+    throw new Error(typeof msg === 'string' ? msg : JSON.stringify(msg))
+  }
+  return {
+    stdoutLines: Array.isArray(body?.stdout_lines) ? body.stdout_lines.map((s) => String(s ?? '')) : [],
+    stderrLines: Array.isArray(body?.stderr_lines) ? body.stderr_lines.map((s) => String(s ?? '')) : [],
+    exitCode: Number.isInteger(body?.exit_code) ? body.exit_code : 0,
+    truncated: Boolean(body?.truncated),
+    timedOut: Boolean(body?.timed_out),
+    runError: body?.run_error != null ? String(body.run_error) : '',
+  }
+}
+
 /** @param {{ node: object | null, environment: string }} props */
 export function DetailPanel({ node, environment }) {
   const { stackName, nodeId } = useParams()
   const navigate = useNavigate()
   const [tab, setTab] = useState('deployments')
   const [copyWhich, setCopyWhich] = useState(null)
+  const [logsLoading, setLogsLoading] = useState(false)
+  const [logsError, setLogsError] = useState('')
+  const [logsResult, setLogsResult] = useState(null)
+  const [handoffStatus, setHandoffStatus] = useState('')
+  const [openInMenuOpen, setOpenInMenuOpen] = useState(false)
 
   const close = () => {
     navigate(`/stack/${stackName}`)
@@ -124,13 +154,22 @@ export function DetailPanel({ node, environment }) {
 
   useEffect(() => {
     setCopyWhich(null)
+    setHandoffStatus('')
+    setOpenInMenuOpen(false)
   }, [node?.id, tab])
+
+  useEffect(() => {
+    setLogsLoading(false)
+    setLogsError('')
+    setLogsResult(null)
+  }, [node?.id, environment])
 
   const deployments = node ? buildDeploymentRows(node, environment) : []
   const logsCmd = node?.logs != null ? String(node.logs).trim() : ''
   const statusCmd = node?.statusCommand != null ? String(node.statusCommand).trim() : ''
   const hasLogsCommand = logsCmd !== ''
   const hasStatusCommand = statusCmd !== ''
+  const showAIActions = node != null && isErroredNode(node)
 
   const region = node ? metaLookup(node.meta, 'region') : '—'
   const branch = node ? metaLookup(node.meta, 'branch') : '—'
@@ -148,6 +187,42 @@ export function DetailPanel({ node, environment }) {
     } catch {
       setCopyWhich(null)
     }
+  }
+
+  const runLogs = async () => {
+    if (!node?.id) {
+      return
+    }
+    setLogsLoading(true)
+    setLogsError('')
+    try {
+      const next = await fetchLogs(environment, node.id)
+      setLogsResult(next)
+    } catch (e) {
+      setLogsError(e instanceof Error ? e.message : String(e))
+      setLogsResult(null)
+    } finally {
+      setLogsLoading(false)
+    }
+  }
+
+  const openAI = async (tool) => {
+    if (!node) {
+      return
+    }
+    const prompt = buildErrorPrompt({ node, environment, logsResult })
+    try {
+      const result = await openInAIWithFallback({ tool, prompt })
+      if (result.mode === 'deep_link') {
+        setHandoffStatus(`Opened ${tool}`)
+      } else {
+        setHandoffStatus(`Prompt copied for ${tool}`)
+      }
+    } catch {
+      setHandoffStatus(`Could not open ${tool}; copy failed`)
+    }
+    setOpenInMenuOpen(false)
+    window.setTimeout(() => setHandoffStatus(''), 2500)
   }
 
   const recentList = node && Array.isArray(node.recentErrors) ? node.recentErrors.filter((s) => String(s).trim() !== '') : []
@@ -305,6 +380,95 @@ export function DetailPanel({ node, environment }) {
                   Commands from perch.yaml (same as the TUI). Run locally in your shell; nothing is executed from the
                   browser.
                 </p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => void runLogs()}
+                    disabled={!node?.id || logsLoading}
+                    className="rounded-md border border-gray-300 bg-white px-2.5 py-1 text-xs font-medium text-gray-800 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {logsLoading ? 'Running...' : 'Run logs'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const prompt = buildErrorPrompt({ node, environment, logsResult })
+                      void copyText('prompt', prompt)
+                    }}
+                    className="rounded-md border border-gray-300 bg-white px-2.5 py-1 text-xs font-medium text-gray-800 hover:bg-gray-50"
+                  >
+                    {copyWhich === 'prompt' ? 'Prompt copied' : 'Copy prompt'}
+                  </button>
+                </div>
+                {showAIActions && (
+                  <div className="relative mt-2 inline-block">
+                    <button
+                      type="button"
+                      onClick={() => setOpenInMenuOpen((v) => !v)}
+                      className="rounded-md border border-gray-300 bg-white px-2.5 py-1 text-xs font-medium text-gray-800 hover:bg-gray-50"
+                    >
+                      Open in
+                    </button>
+                    {openInMenuOpen && (
+                      <div className="absolute z-20 mt-1 min-w-[180px] rounded-md border border-gray-200 bg-white p-1 shadow-lg">
+                        <button
+                          type="button"
+                          onClick={() => void openAI('codex')}
+                          className="block w-full rounded px-2 py-1.5 text-left text-xs text-gray-800 hover:bg-gray-50"
+                        >
+                          Codex
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => void openAI('cursor')}
+                          className="block w-full rounded px-2 py-1.5 text-left text-xs text-gray-800 hover:bg-gray-50"
+                        >
+                          Cursor
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => void openAI('claude')}
+                          className="block w-full rounded px-2 py-1.5 text-left text-xs text-gray-800 hover:bg-gray-50"
+                        >
+                          Claude Code
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+                {handoffStatus !== '' && <p className="mt-2 text-xs text-gray-500">{handoffStatus}</p>}
+                {logsError !== '' && <p className="mt-2 text-xs text-red-600">{logsError}</p>}
+                {logsResult && (
+                  <div className="mt-3 space-y-2">
+                    {logsResult.runError !== '' && (
+                      <p className="rounded-md border border-red-200 bg-red-50 px-2 py-1 text-xs text-red-700">
+                        {logsResult.runError}
+                      </p>
+                    )}
+                    {(logsResult.timedOut || logsResult.truncated) && (
+                      <p className="rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-xs text-amber-800">
+                        {logsResult.timedOut ? 'Command timed out. ' : ''}
+                        {logsResult.truncated ? 'Output truncated.' : ''}
+                      </p>
+                    )}
+                    <div className="text-xs text-gray-500">Exit code: {logsResult.exitCode}</div>
+                    <CopyBlock
+                      label="stderr"
+                      text={logsResult.stderrLines.join('\n')}
+                      copied={copyWhich === 'stderr-out'}
+                      onCopy={() => void copyText('stderr-out', logsResult.stderrLines.join('\n'))}
+                    />
+                    <CopyBlock
+                      label="stdout"
+                      text={logsResult.stdoutLines.join('\n')}
+                      copied={copyWhich === 'stdout-out'}
+                      onCopy={() => void copyText('stdout-out', logsResult.stdoutLines.join('\n'))}
+                    />
+                    {logsResult.stdoutLines.length === 0 && logsResult.stderrLines.length === 0 && (
+                      <p className="text-xs text-gray-500">No output returned for this run.</p>
+                    )}
+                  </div>
+                )}
                 {hasStatusCommand && (
                   <CopyBlock
                     label="Health check (status:)"

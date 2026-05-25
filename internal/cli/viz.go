@@ -20,11 +20,15 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/yashg4509/perch/internal/config"
+	"github.com/yashg4509/perch/internal/customlogs"
 	"github.com/yashg4509/perch/internal/graph"
 	"github.com/yashg4509/perch/internal/provider"
+	"github.com/yashg4509/perch/internal/stacklogs"
 	"github.com/yashg4509/perch/internal/stackstatus"
 	webdist "github.com/yashg4509/perch/web"
 )
+
+const logsRunTimeout = 8 * time.Second
 
 func newVizCmd() *cobra.Command {
 	cmd := &cobra.Command{
@@ -83,6 +87,13 @@ func runViz(cmd *cobra.Command, args []string) error {
 			return
 		}
 		serveStatusJSON(w, r, defaultEnv)
+	})
+	mux.HandleFunc("/api/logs", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
+			return
+		}
+		serveLogsJSON(w, r, defaultEnv)
 	})
 	mux.Handle("/", spaHandler(uiFS))
 
@@ -188,6 +199,84 @@ func serveStatusJSON(w http.ResponseWriter, r *http.Request, defaultEnv string) 
 		return
 	}
 	writeJSON(w, http.StatusOK, rep)
+}
+
+type logsResponse struct {
+	StdoutLines []string `json:"stdout_lines,omitempty"`
+	StderrLines []string `json:"stderr_lines,omitempty"`
+	ExitCode    int      `json:"exit_code"`
+	Truncated   bool     `json:"truncated"`
+	TimedOut    bool     `json:"timed_out"`
+	RunError    string   `json:"run_error,omitempty"`
+	Source      string   `json:"source,omitempty"`
+	SetupHint   string   `json:"setup_hint,omitempty"`
+}
+
+func serveLogsJSON(w http.ResponseWriter, r *http.Request, defaultEnv string) {
+	env := envFromRequest(r, defaultEnv)
+	nodeName := strings.TrimSpace(r.URL.Query().Get("node"))
+	if nodeName == "" {
+		writeJSONError(w, http.StatusBadRequest, "node query parameter is required")
+		return
+	}
+
+	cfg, reg, err := loadStackFromWD()
+	if err != nil {
+		writeJSONError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	nodes, ok := cfg.Environments[env]
+	if !ok {
+		writeJSONError(w, http.StatusBadRequest, fmt.Sprintf("unknown environment %q", env))
+		return
+	}
+	n, ok := nodes[nodeName]
+	if !ok {
+		writeJSONError(w, http.StatusBadRequest, fmt.Sprintf("unknown node %q for environment %q", nodeName, env))
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), logsRunTimeout)
+	defer cancel()
+
+	if n.Provider == "custom" {
+		if strings.TrimSpace(n.Logs) == "" {
+			writeJSONError(w, http.StatusBadRequest, fmt.Sprintf("node %q has no logs command", nodeName))
+			return
+		}
+		res, err := customlogs.Run(ctx, n.Logs)
+		if err != nil {
+			writeJSONError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		writeJSON(w, http.StatusOK, logsResponse{
+			StdoutLines: res.StdoutLines,
+			StderrLines: res.StderrLines,
+			ExitCode:    res.ExitCode,
+			Truncated:   res.Truncated,
+			TimedOut:    res.TimedOut,
+			RunError:    res.RunError,
+			Source:      "custom",
+		})
+		return
+	}
+
+	logRes, err := stacklogs.Resolve(ctx, nodeName, n, reg)
+	if err != nil {
+		writeJSONError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	resp := logsResponse{
+		StdoutLines: logRes.Lines,
+		ExitCode:    0,
+		Truncated:   logRes.Truncated,
+		Source:      logRes.Source,
+		SetupHint:   logRes.SetupHint,
+	}
+	if logRes.Source == "none" && len(logRes.Lines) == 0 {
+		resp.ExitCode = 0
+	}
+	writeJSON(w, http.StatusOK, resp)
 }
 
 func spaHandler(root fs.FS) http.Handler {
