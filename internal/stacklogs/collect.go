@@ -1,5 +1,5 @@
 // Package stacklogs resolves log lines for deployable provider nodes using automatic
-// credential discovery (auth files, CLI auto-setup, environment tokens, credential store)
+// credential discovery (auth files, environment tokens, credential store, CLI auto-setup)
 // before falling back to setup hints.
 package stacklogs
 
@@ -22,7 +22,7 @@ const MaxLines = 4000
 
 // StrategyResult records one attempt in the log resolution chain.
 type StrategyResult struct {
-	Name   string // "auth_file", "auto_setup", "env_token", "credentials_store"
+	Name   string // "auth_file", "env_token", "credentials_store", "auto_setup"
 	Result string // "success", "token_expired", "not_found", "install_failed", "auth_failed", "not_set", "skipped"
 }
 
@@ -53,7 +53,7 @@ type platform struct {
 	credentialsStore func() *credentials.Store
 }
 
-// Resolve tries auth-file, auto-setup, env-token, and credential-store strategies in order.
+// Resolve tries auth-file, env-token, credential-store, then auto-setup (last resort) in order.
 func Resolve(ctx context.Context, nodeName string, n config.Node, reg *provider.Registry) (LogResult, error) {
 	return resolveWithFlags(ctx, nodeName, n, reg, false)
 }

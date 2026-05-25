@@ -54,18 +54,7 @@ func resolveVercel(ctx context.Context, nodeName string, n config.Node, reg *pro
 		tried = append(tried, StrategyResult{Name: "auth_file", Result: "not_found"})
 	}
 
-	// 2. auto_setup
-	if !autoSetupAttempted {
-		setupOK, result := autoSetup(ctx, spec)
-		tried = append(tried, StrategyResult{Name: "auto_setup", Result: result})
-		if setupOK {
-			inner, err := resolveVercel(ctx, nodeName, n, reg, true)
-			inner.StrategiesTried = append(tried, inner.StrategiesTried...)
-			return inner, err
-		}
-	}
-
-	// 3a. env_token
+	// 2. env_token
 	envSR := StrategyResult{Name: "env_token"}
 	if tok := tokenFromEnv(spec); tok != "" {
 		res, fetched, authFailed := tryFetchVercelLogs(ctx, spec, tok, project, "env_token")
@@ -84,7 +73,7 @@ func resolveVercel(ctx context.Context, nodeName string, n config.Node, reg *pro
 	}
 	tried = append(tried, envSR)
 
-	// 3b. credentials_store
+	// 3. credentials_store
 	storeSR := StrategyResult{Name: "credentials_store"}
 	if tok, hasStore := tokenFromCredentialsStore(spec); hasStore {
 		res, fetched, authFailed := tryFetchVercelLogs(ctx, spec, tok, project, "credentials_store")
@@ -103,6 +92,18 @@ func resolveVercel(ctx context.Context, nodeName string, n config.Node, reg *pro
 	}
 	tried = append(tried, storeSR)
 
+	// 4. auto_setup (last resort)
+	if !autoSetupAttempted {
+		setupOK, result := autoSetup(ctx, spec)
+		tried = append(tried, StrategyResult{Name: "auto_setup", Result: result})
+		if setupOK {
+			inner, err := resolveVercel(ctx, nodeName, n, reg, true)
+			inner.StrategiesTried = append(tried, inner.StrategiesTried...)
+			return inner, err
+		}
+	}
+
+	// Fallback: setup_hint
 	return LogResult{
 		Source:          "none",
 		Provider:        "vercel",
