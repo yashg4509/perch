@@ -21,12 +21,12 @@ const MaxLines = 4000
 
 // Result is bounded log capture from a single shell invocation.
 type Result struct {
-	StdoutLines  []string
-	StderrLines  []string
-	ExitCode     int
-	Truncated    bool
-	TimedOut     bool
-	RunError     string // non-empty when the process could not be started or context failed before exit
+	StdoutLines []string
+	StderrLines []string
+	ExitCode    int
+	Truncated   bool
+	TimedOut    bool
+	RunError    string // non-empty when the process could not be started or context failed before exit
 }
 
 // Run executes cmdline via the system shell, captures stdout/stderr, and splits into lines.

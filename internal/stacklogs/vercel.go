@@ -104,9 +104,9 @@ func vercelDeploymentEvents(ctx context.Context, spec *provider.Spec, token, dep
 		return nil, err
 	}
 	vars := map[string]string{
-		"token":           token,
-		"deployment_id":   deploymentID,
-		"deploymentId":    deploymentID,
+		"token":         token,
+		"deployment_id": deploymentID,
+		"deploymentId":  deploymentID,
 	}
 	path = provider.SubstitutePlaceholders(path, vars)
 	q := url.Values{}
