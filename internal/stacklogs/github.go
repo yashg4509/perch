@@ -66,6 +66,7 @@ func fetchGitHubActionsLogs(ctx context.Context, prov, project string) (LogResul
 }
 
 func ghCLIRunLogs(ctx context.Context, owner, repo string) ([]string, bool) {
+	// #nosec G204 -- argv[0] is constant "gh"; owner/repo are parsed from .git/config or git remote output, not from user input.
 	list := exec.CommandContext(ctx, "gh", "run", "list",
 		"--repo", owner+"/"+repo,
 		"--limit", "5",
@@ -95,6 +96,7 @@ func ghCLIRunLogs(ctx context.Context, owner, repo string) ([]string, bool) {
 	if runID == 0 {
 		return nil, false
 	}
+	// #nosec G204 -- argv[0] is constant "gh"; runID is an integer parsed from GitHub API response, owner/repo same as above.
 	view := exec.CommandContext(ctx, "gh", "run", "view",
 		fmt.Sprintf("%d", runID),
 		"--repo", owner+"/"+repo,
@@ -280,6 +282,7 @@ func parseGitConfigRemotes(config string) (owner, repo string, ok bool) {
 }
 
 func parseGitRemoteFromCmd(dir string) (owner, repo string, ok bool) {
+	// #nosec G204 -- argv[0] is constant "git"; dir is derived from filepath walk up from cwd, not from user input.
 	out, err := exec.Command("git", "-C", dir, "remote", "get-url", "origin").Output()
 	if err != nil {
 		return "", "", false
