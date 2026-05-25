@@ -22,8 +22,8 @@ const MaxLines = 4000
 
 // StrategyResult records one attempt in the log resolution chain.
 type StrategyResult struct {
-	Name   string // "auth_file", "env_token", "credentials_store", "auto_setup"
-	Result string // "success", "token_expired", "not_found", "install_failed", "auth_failed", "not_set", "skipped"
+	Name   string `json:"name"`   // "auth_file", "env_token", "credentials_store", "auto_setup"
+	Result string `json:"result"` // "success", "token_expired", "not_found", "install_failed", "auth_failed", "not_set", "skipped"
 }
 
 // LogResult is the outcome of [Resolve].
