@@ -202,14 +202,15 @@ func serveStatusJSON(w http.ResponseWriter, r *http.Request, defaultEnv string) 
 }
 
 type logsResponse struct {
-	StdoutLines []string `json:"stdout_lines,omitempty"`
-	StderrLines []string `json:"stderr_lines,omitempty"`
-	ExitCode    int      `json:"exit_code"`
-	Truncated   bool     `json:"truncated"`
-	TimedOut    bool     `json:"timed_out"`
-	RunError    string   `json:"run_error,omitempty"`
-	Source      string   `json:"source,omitempty"`
-	SetupHint   string   `json:"setup_hint,omitempty"`
+	StdoutLines     []string                   `json:"stdout_lines,omitempty"`
+	StderrLines     []string                   `json:"stderr_lines,omitempty"`
+	ExitCode        int                        `json:"exit_code"`
+	Truncated       bool                       `json:"truncated"`
+	TimedOut        bool                       `json:"timed_out"`
+	RunError        string                     `json:"run_error,omitempty"`
+	Source          string                     `json:"source,omitempty"`
+	SetupHint       string                     `json:"setup_hint,omitempty"`
+	StrategiesTried []stacklogs.StrategyResult `json:"strategies_tried,omitempty"`
 }
 
 func serveLogsJSON(w http.ResponseWriter, r *http.Request, defaultEnv string) {
@@ -267,11 +268,12 @@ func serveLogsJSON(w http.ResponseWriter, r *http.Request, defaultEnv string) {
 		return
 	}
 	resp := logsResponse{
-		StdoutLines: logRes.Lines,
-		ExitCode:    0,
-		Truncated:   logRes.Truncated,
-		Source:      logRes.Source,
-		SetupHint:   logRes.SetupHint,
+		StdoutLines:     logRes.Lines,
+		ExitCode:        0,
+		Truncated:       logRes.Truncated,
+		Source:          logRes.Source,
+		SetupHint:       logRes.SetupHint,
+		StrategiesTried: logRes.StrategiesTried,
 	}
 	if logRes.Source == "none" && len(logRes.Lines) == 0 {
 		resp.ExitCode = 0

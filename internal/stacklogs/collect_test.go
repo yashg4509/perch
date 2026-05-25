@@ -10,8 +10,10 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/yashg4509/perch/internal/config"
+	"github.com/yashg4509/perch/internal/credentials"
 	"github.com/yashg4509/perch/internal/provider"
 	"github.com/yashg4509/perch/internal/testutil"
 )
@@ -46,8 +48,6 @@ func TestResolve_Vercel_AuthFile(t *testing.T) {
 	}
 	platformHooks.readFile = os.ReadFile
 	platformHooks.getenv = func(string) string { return "" }
-	platformHooks.repoSlug = func() (string, string, bool) { return "", "", false }
-
 	reg := vercelRegistry(t, srv.URL)
 	got, err := Resolve(context.Background(), "web", config.Node{Provider: "vercel", Project: "demo"}, reg)
 	if err != nil {
@@ -88,8 +88,6 @@ func TestResolve_Vercel_EnvToken(t *testing.T) {
 		}
 		return ""
 	}
-	platformHooks.repoSlug = func() (string, string, bool) { return "", "", false }
-
 	reg := vercelRegistry(t, srv.URL)
 	got, err := Resolve(context.Background(), "web", config.Node{Provider: "vercel", Project: "demo"}, reg)
 	if err != nil {
@@ -147,8 +145,6 @@ func TestResolve_Vercel_403Fallthrough(t *testing.T) {
 		}
 		return ""
 	}
-	platformHooks.repoSlug = func() (string, string, bool) { return "", "", false }
-
 	reg := vercelRegistry(t, srv.URL)
 	got, err := Resolve(context.Background(), "web", config.Node{Provider: "vercel", Project: "demo"}, reg)
 	if err != nil {
@@ -162,63 +158,74 @@ func TestResolve_Vercel_403Fallthrough(t *testing.T) {
 	}
 }
 
-func TestResolve_Vercel_GitHubActions(t *testing.T) {
+func TestResolve_Vercel_CredentialsStore(t *testing.T) {
 	restore := swapPlatformHooks(t)
 	defer restore()
 
-	ghSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Authorization") != "Bearer store_tok" {
+			t.Fatalf("auth %q", r.Header.Get("Authorization"))
+		}
 		switch r.URL.Path {
-		case "/repos/acme/widget/actions/runs":
-			_, _ = io.WriteString(w, `{"workflow_runs":[{"id":99}]}`)
-		case "/repos/acme/widget/actions/runs/99/jobs":
-			_, _ = io.WriteString(w, `{"jobs":[{"id":7,"name":"Deploy to Vercel"}]}`)
-		case "/repos/acme/widget/actions/jobs/7/logs":
-			_, _ = io.WriteString(w, "step 1\nDeploying with vercel\nstep 2\n")
+		case "/v6/deployments":
+			_, _ = io.WriteString(w, `{"deployments":[{"uid":"dpl_store"}]}`)
+		case "/v2/deployments/dpl_store/events":
+			_, _ = io.WriteString(w, `[{"type":"stdout","text":"from credentials store"}]`)
 		default:
-			t.Fatalf("github path %s", r.URL.Path)
+			t.Fatalf("path %s", r.URL.Path)
 		}
 	}))
-	t.Cleanup(ghSrv.Close)
+	t.Cleanup(srv.Close)
 
-	oldClient := githubHTTPClient
-	oldBase := githubAPIBase
-	githubHTTPClient = ghSrv.Client()
-	githubAPIBase = ghSrv.URL
-	t.Cleanup(func() {
-		githubHTTPClient = oldClient
-		githubAPIBase = oldBase
-	})
-
-	platformHooks.readFile = func(path string) ([]byte, error) {
-		if strings.HasSuffix(path, "hosts.yml") {
-			return []byte("github.com:\n  oauth_token: gh_test\n"), nil
-		}
-		return nil, os.ErrNotExist
+	tmp := t.TempDir()
+	credPath := filepath.Join(tmp, ".perch", "credentials")
+	store := credentials.NewStoreAt(credPath)
+	if err := store.Set("vercel_token", "store_tok"); err != nil {
+		t.Fatal(err)
 	}
-	platformHooks.userHomeDir = func() (string, error) { return t.TempDir(), nil }
+	platformHooks.readFile = func(string) ([]byte, error) { return nil, os.ErrNotExist }
+	platformHooks.userHomeDir = func() (string, error) { return tmp, nil }
 	platformHooks.getenv = func(string) string { return "" }
-	platformHooks.repoSlug = func() (string, string, bool) { return "acme", "widget", true }
-	platformHooks.ghLookPath = func(string) (string, error) { return "", os.ErrNotExist }
+	platformHooks.credentialsStore = func() *credentials.Store { return credentials.NewStoreAt(credPath) }
 
-	reg := vercelRegistry(t, "http://127.0.0.1:1") // unreachable; should not be called
+	reg := vercelRegistry(t, srv.URL)
 	got, err := Resolve(context.Background(), "web", config.Node{Provider: "vercel", Project: "demo"}, reg)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got.Source != "github_actions" {
+	if got.Source != "credentials_store" {
 		t.Fatalf("source=%q", got.Source)
 	}
-	if len(got.Lines) == 0 {
-		t.Fatal("expected filtered github log lines")
-	}
-	found := false
-	for _, l := range got.Lines {
-		if strings.Contains(strings.ToLower(l), "vercel") {
-			found = true
-		}
-	}
-	if !found {
+	if len(got.Lines) != 1 || got.Lines[0] != "from credentials store" {
 		t.Fatalf("lines=%v", got.Lines)
+	}
+}
+
+func TestResolve_Vercel_autoSetupAttempted_skipsAutoSetup(t *testing.T) {
+	restore := swapPlatformHooks(t)
+	defer restore()
+	restoreSetup := swapSetupHooks(t)
+	defer restoreSetup()
+
+	var autoSetupCalls int
+	setupHooks.lookPath = func(string) (string, error) { return "", errNotFound }
+	setupHooks.runShell = func(context.Context, string, time.Duration) error {
+		autoSetupCalls++
+		return nil
+	}
+
+	reg := vercelRegistry(t, "http://127.0.0.1:1")
+	got, err := resolveWithFlags(context.Background(), "web", config.Node{Provider: "vercel", Project: "demo"}, reg, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if autoSetupCalls > 0 {
+		t.Fatalf("auto_setup should be skipped, calls=%d", autoSetupCalls)
+	}
+	for _, s := range got.StrategiesTried {
+		if s.Name == "auto_setup" {
+			t.Fatalf("unexpected auto_setup in %v", got.StrategiesTried)
+		}
 	}
 }
 
@@ -229,8 +236,6 @@ func TestResolve_Vercel_None(t *testing.T) {
 	platformHooks.readFile = func(string) ([]byte, error) { return nil, os.ErrNotExist }
 	platformHooks.userHomeDir = func() (string, error) { return t.TempDir(), nil }
 	platformHooks.getenv = func(string) string { return "" }
-	platformHooks.repoSlug = func() (string, string, bool) { return "", "", false }
-
 	reg := vercelRegistry(t, "http://127.0.0.1:1")
 	got, err := Resolve(context.Background(), "web", config.Node{Provider: "vercel", Project: "demo"}, reg)
 	if err != nil {
@@ -239,8 +244,10 @@ func TestResolve_Vercel_None(t *testing.T) {
 	if got.Source != "none" {
 		t.Fatalf("source=%q", got.Source)
 	}
-	if got.SetupHint != vercelSetupHint() {
-		t.Fatalf("hint=%q", got.SetupHint)
+	spec := reg.ByName["vercel"]
+	want := buildSetupHint(spec)
+	if got.SetupHint != want {
+		t.Fatalf("hint=%q want=%q", got.SetupHint, want)
 	}
 	if len(got.Lines) != 0 {
 		t.Fatalf("lines=%v", got.Lines)
@@ -280,41 +287,6 @@ func TestReadVercelAuthToken_OSPath(t *testing.T) {
 	}
 }
 
-func TestReadGitHubTokenFromHosts(t *testing.T) {
-	restore := swapPlatformHooks(t)
-	defer restore()
-
-	tmp := t.TempDir()
-	hosts := filepath.Join(tmp, "gh", "hosts.yml")
-	if err := os.MkdirAll(filepath.Dir(hosts), 0o700); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(hosts, []byte("github.com:\n  oauth_token: tok_from_hosts\n"), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	platformHooks.userHomeDir = func() (string, error) { return tmp, nil }
-	platformHooks.getenv = func(k string) string {
-		if k == "XDG_CONFIG_HOME" {
-			return filepath.Join(tmp, "xdg")
-		}
-		return ""
-	}
-	// Override gh path via XDG
-	xdgHosts := filepath.Join(tmp, "xdg", "gh", "hosts.yml")
-	if err := os.MkdirAll(filepath.Dir(xdgHosts), 0o700); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(xdgHosts, []byte("github.com:\n  oauth_token: xdg_tok\n"), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	platformHooks.readFile = os.ReadFile
-
-	tok, ok := readGitHubTokenFromHosts()
-	if !ok || tok != "xdg_tok" {
-		t.Fatalf("token=%q ok=%v", tok, ok)
-	}
-}
-
 func TestParseVercelEvents(t *testing.T) {
 	body := []byte(`[
 	  {"type":"stdout","text":"a"},
@@ -337,44 +309,6 @@ func TestParseVercelEvents_NDJSON(t *testing.T) {
 	}
 	if len(lines) != 2 || lines[0] != "line-1" || lines[1] != "line-2" {
 		t.Fatalf("%v", lines)
-	}
-}
-
-func TestDetectRepoSlug_WalksUpFromSubdir(t *testing.T) {
-	root := t.TempDir()
-	repo := filepath.Join(root, "my-app")
-	sub := filepath.Join(repo, "packages", "web")
-	for _, d := range []string{repo, sub} {
-		if err := os.MkdirAll(d, 0o700); err != nil {
-			t.Fatal(err)
-		}
-	}
-	gitDir := filepath.Join(repo, ".git")
-	if err := os.Mkdir(gitDir, 0o700); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(gitDir, "config"), []byte(`
-[remote "origin"]
-	url = https://github.com/acme/widget.git
-`), 0o600); err != nil {
-		t.Fatal(err)
-	}
-
-	prev, err := os.Getwd()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := os.Chdir(sub); err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { _ = os.Chdir(prev) })
-
-	owner, name, ok := detectRepoSlug()
-	if !ok {
-		t.Fatal("expected repo detection from subdirectory")
-	}
-	if owner != "acme" || name != "widget" {
-		t.Fatalf("got %s/%s", owner, name)
 	}
 }
 
@@ -420,13 +354,24 @@ func vercelRegistry(t *testing.T, baseURL string) *provider.Registry {
 func swapPlatformHooks(t *testing.T) func() {
 	t.Helper()
 	prev := platformHooks
+	prevSetup := setupHooks
+	tmp := t.TempDir()
+	credPath := filepath.Join(tmp, ".perch", "credentials")
 	platformHooks = platform{
 		getenv:      os.Getenv,
 		readFile:    os.ReadFile,
-		userHomeDir: os.UserHomeDir,
+		userHomeDir: func() (string, error) { return tmp, nil },
 		httpClient:  provider.HTTPClientForAPI(),
-		ghLookPath:  execLookPath,
-		repoSlug:    detectRepoSlug,
+		credentialsStore: func() *credentials.Store {
+			return credentials.NewStoreAt(credPath)
+		},
 	}
-	return func() { platformHooks = prev }
+	setupHooks.lookPath = func(string) (string, error) { return "", errNotFound }
+	setupHooks.runShell = func(context.Context, string, time.Duration) error {
+		return errPath("auto setup disabled in test")
+	}
+	return func() {
+		platformHooks = prev
+		setupHooks = prevSetup
+	}
 }

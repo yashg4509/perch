@@ -12,6 +12,10 @@ cli:
     env_list:       "vercel env ls {project}"
     env_set:        "vercel env add {key} {value} {environment} {project}"
     list_resources: "vercel project ls --json"
+  install:
+    npm:  "npm install -g vercel"
+    brew: "brew install vercel-cli"
+  auth_cmd: "vercel login"
 
 api:
   base_url: "https://api.vercel.com"
@@ -27,3 +31,5 @@ api:
 credentials:
   key: vercel_token
   prompt: "Vercel API token (vercel.com/account/tokens)"
+  dashboard_url: "https://vercel.com/account/tokens"
+  env_var: "VERCEL_TOKEN"

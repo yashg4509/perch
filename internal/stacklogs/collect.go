@@ -1,6 +1,6 @@
 // Package stacklogs resolves log lines for deployable provider nodes using automatic
-// credential discovery (auth files, GitHub Actions, environment tokens) before falling
-// back to setup hints.
+// credential discovery (auth files, CLI auto-setup, environment tokens, credential store)
+// before falling back to setup hints.
 package stacklogs
 
 import (
@@ -13,42 +13,52 @@ import (
 	"strings"
 
 	"github.com/yashg4509/perch/internal/config"
+	"github.com/yashg4509/perch/internal/credentials"
 	"github.com/yashg4509/perch/internal/provider"
 )
 
 // MaxLines is the maximum number of log lines returned per resolution.
 const MaxLines = 4000
 
-// LogResult is the outcome of [Resolve].
-type LogResult struct {
-	Lines     []string
-	Source    string // "auth_file" | "github_actions" | "env_token" | "custom" | "none"
-	Provider  string
-	Truncated bool
-	SetupHint string // only set when Source == "none"
+// StrategyResult records one attempt in the log resolution chain.
+type StrategyResult struct {
+	Name   string // "auth_file", "auto_setup", "env_token", "credentials_store"
+	Result string // "success", "token_expired", "not_found", "install_failed", "auth_failed", "not_set", "skipped"
 }
 
-// platform hooks for tests (filesystem, env, subprocess, repo detection).
+// LogResult is the outcome of [Resolve].
+type LogResult struct {
+	Lines           []string
+	Source          string // "auth_file" | "env_token" | "credentials_store" | "custom" | "none"
+	Provider        string
+	Truncated       bool
+	SetupHint       string // only set when Source == "none"
+	StrategiesTried []StrategyResult
+}
+
+// platform hooks for tests (filesystem, env, subprocess, credential store).
 var platformHooks = platform{
-	getenv:      os.Getenv,
-	readFile:    os.ReadFile,
-	userHomeDir: os.UserHomeDir,
-	httpClient:  provider.HTTPClientForAPI(),
-	ghLookPath:  execLookPath,
-	repoSlug:    detectRepoSlug,
+	getenv:           os.Getenv,
+	readFile:         os.ReadFile,
+	userHomeDir:      os.UserHomeDir,
+	httpClient:       provider.HTTPClientForAPI(),
+	credentialsStore: func() *credentials.Store { return credentials.NewStore() },
 }
 
 type platform struct {
-	getenv      func(string) string
-	readFile    func(string) ([]byte, error)
-	userHomeDir func() (string, error)
-	httpClient  *http.Client
-	ghLookPath  func(string) (string, error)
-	repoSlug    func() (owner, repo string, ok bool)
+	getenv           func(string) string
+	readFile         func(string) ([]byte, error)
+	userHomeDir      func() (string, error)
+	httpClient       *http.Client
+	credentialsStore func() *credentials.Store
 }
 
-// Resolve tries auth-file, GitHub Actions, and environment-token strategies in order.
+// Resolve tries auth-file, auto-setup, env-token, and credential-store strategies in order.
 func Resolve(ctx context.Context, nodeName string, n config.Node, reg *provider.Registry) (LogResult, error) {
+	return resolveWithFlags(ctx, nodeName, n, reg, false)
+}
+
+func resolveWithFlags(ctx context.Context, nodeName string, n config.Node, reg *provider.Registry, autoSetupAttempted bool) (LogResult, error) {
 	if reg == nil {
 		return LogResult{}, fmt.Errorf("stacklogs: nil registry")
 	}
@@ -57,7 +67,7 @@ func Resolve(ctx context.Context, nodeName string, n config.Node, reg *provider.
 
 	switch prov {
 	case "vercel":
-		return resolveVercel(ctx, nodeName, n, reg)
+		return resolveVercel(ctx, nodeName, n, reg, autoSetupAttempted)
 	// TODO: add supabase, render
 	default:
 		out.Source = "none"
@@ -77,8 +87,28 @@ func nodeFields(n config.Node) map[string]string {
 	return m
 }
 
-func vercelSetupHint() string {
-	return "Set VERCEL_TOKEN or run 'vercel login' to enable logs for this node"
+func tokenFromEnv(spec *provider.Spec) string {
+	if spec == nil {
+		return ""
+	}
+	ev := strings.TrimSpace(spec.Credentials.EnvVar)
+	if ev == "" {
+		return ""
+	}
+	return strings.TrimSpace(platformHooks.getenv(ev))
+}
+
+func tokenFromCredentialsStore(spec *provider.Spec) (string, bool) {
+	if spec == nil || strings.TrimSpace(spec.Credentials.Key) == "" {
+		return "", false
+	}
+	store := platformHooks.credentialsStore()
+	v, ok, err := store.Get(spec.Credentials.Key)
+	if err != nil || !ok {
+		return "", false
+	}
+	v = strings.TrimSpace(v)
+	return v, v != ""
 }
 
 func truncateLines(lines []string) ([]string, bool) {
@@ -105,11 +135,4 @@ func vercelAuthFilePath() string {
 	default:
 		return ""
 	}
-}
-
-func ghHostsPath() string {
-	if xdg := strings.TrimSpace(platformHooks.getenv("XDG_CONFIG_HOME")); xdg != "" {
-		return filepath.Join(xdg, "gh", "hosts.yml")
-	}
-	return homePath(".config", "gh", "hosts.yml")
 }

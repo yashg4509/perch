@@ -22,6 +22,8 @@ type Spec struct {
 type CLISpec struct {
 	Binary   string            `yaml:"binary"`
 	Commands map[string]string `yaml:"commands"`
+	Install  map[string]string `yaml:"install,omitempty"`
+	AuthCmd  string            `yaml:"auth_cmd,omitempty"`
 }
 
 // APISpec is the REST section (always required).
@@ -33,8 +35,10 @@ type APISpec struct {
 
 // CredentialsSpec describes stored credential metadata (not the secret value).
 type CredentialsSpec struct {
-	Key    string `yaml:"key"`
-	Prompt string `yaml:"prompt"`
+	Key          string `yaml:"key"`
+	Prompt       string `yaml:"prompt"`
+	DashboardURL string `yaml:"dashboard_url,omitempty"`
+	EnvVar       string `yaml:"env_var,omitempty"`
 }
 
 // ParseProviderYAML decodes and validates one provider document.

@@ -14,8 +14,17 @@ type Store struct {
 	mu   sync.Mutex
 }
 
-// NewStore returns a store that reads/writes path (caller supplies absolute path).
-func NewStore(path string) *Store {
+// NewStore returns a store at $HOME/.perch/credentials.
+func NewStore() *Store {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		home = ""
+	}
+	return NewStoreAt(filepath.Join(home, ".perch", "credentials"))
+}
+
+// NewStoreAt returns a store that reads/writes path (caller supplies absolute path).
+func NewStoreAt(path string) *Store {
 	return &Store{path: path}
 }
 

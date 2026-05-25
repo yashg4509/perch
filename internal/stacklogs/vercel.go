@@ -17,7 +17,9 @@ import (
 	"github.com/yashg4509/perch/internal/provider"
 )
 
-func resolveVercel(ctx context.Context, nodeName string, n config.Node, reg *provider.Registry) (LogResult, error) {
+// TODO: github_actions strategy for deploy log history (v2)
+
+func resolveVercel(ctx context.Context, nodeName string, n config.Node, reg *provider.Registry, autoSetupAttempted bool) (LogResult, error) {
 	project := strings.TrimSpace(n.Project)
 	if project == "" {
 		return LogResult{
@@ -31,45 +33,105 @@ func resolveVercel(ctx context.Context, nodeName string, n config.Node, reg *pro
 		return LogResult{}, fmt.Errorf("stacklogs: vercel provider spec missing from registry")
 	}
 
-	if tok, ok := readVercelAuthToken(); ok {
-		if res, ok := fetchVercelLogs(ctx, spec, tok, project, "auth_file"); ok {
+	var tried []StrategyResult
+
+	// 1. auth_file
+	if tok, hasTok := readVercelAuthToken(); hasTok {
+		sr := StrategyResult{Name: "auth_file"}
+		res, fetched, authFailed := tryFetchVercelLogs(ctx, spec, tok, project, "auth_file")
+		if fetched {
+			sr.Result = "success"
+			res.StrategiesTried = append(tried, sr)
 			return res, nil
+		}
+		if authFailed {
+			sr.Result = "token_expired"
+		} else {
+			sr.Result = "not_found"
+		}
+		tried = append(tried, sr)
+	} else {
+		tried = append(tried, StrategyResult{Name: "auth_file", Result: "not_found"})
+	}
+
+	// 2. auto_setup
+	if !autoSetupAttempted {
+		setupOK, result := autoSetup(ctx, spec)
+		tried = append(tried, StrategyResult{Name: "auto_setup", Result: result})
+		if setupOK {
+			inner, err := resolveVercel(ctx, nodeName, n, reg, true)
+			inner.StrategiesTried = append(tried, inner.StrategiesTried...)
+			return inner, err
 		}
 	}
 
-	if res, ok := fetchGitHubActionsLogs(ctx, "vercel", project); ok {
-		return res, nil
-	}
-
-	if tok := strings.TrimSpace(platformHooks.getenv("VERCEL_TOKEN")); tok != "" {
-		if res, ok := fetchVercelLogs(ctx, spec, tok, project, "env_token"); ok {
+	// 3a. env_token
+	envSR := StrategyResult{Name: "env_token"}
+	if tok := tokenFromEnv(spec); tok != "" {
+		res, fetched, authFailed := tryFetchVercelLogs(ctx, spec, tok, project, "env_token")
+		if fetched {
+			envSR.Result = "success"
+			res.StrategiesTried = append(tried, envSR)
 			return res, nil
 		}
+		if authFailed {
+			envSR.Result = "token_expired"
+		} else {
+			envSR.Result = "not_found"
+		}
+	} else {
+		envSR.Result = "not_set"
 	}
+	tried = append(tried, envSR)
+
+	// 3b. credentials_store
+	storeSR := StrategyResult{Name: "credentials_store"}
+	if tok, hasStore := tokenFromCredentialsStore(spec); hasStore {
+		res, fetched, authFailed := tryFetchVercelLogs(ctx, spec, tok, project, "credentials_store")
+		if fetched {
+			storeSR.Result = "success"
+			res.StrategiesTried = append(tried, storeSR)
+			return res, nil
+		}
+		if authFailed {
+			storeSR.Result = "token_expired"
+		} else {
+			storeSR.Result = "not_found"
+		}
+	} else {
+		storeSR.Result = "not_set"
+	}
+	tried = append(tried, storeSR)
 
 	return LogResult{
-		Source:    "none",
-		Provider:  "vercel",
-		SetupHint: vercelSetupHint(),
+		Source:          "none",
+		Provider:        "vercel",
+		SetupHint:       buildSetupHint(spec),
+		StrategiesTried: tried,
 	}, nil
 }
 
-func fetchVercelLogs(ctx context.Context, spec *provider.Spec, token, project, source string) (LogResult, bool) {
+func tryFetchVercelLogs(ctx context.Context, spec *provider.Spec, token, project, source string) (LogResult, bool, bool) {
+	res, ok, authFailed := fetchVercelLogs(ctx, spec, token, project, source)
+	return res, ok, authFailed
+}
+
+func fetchVercelLogs(ctx context.Context, spec *provider.Spec, token, project, source string) (LogResult, bool, bool) {
 	deploymentID, err := vercelLatestDeploymentID(ctx, spec, token, project)
 	if isVercelAuthError(err) {
 		logAuthStrategyFailed(source)
-		return LogResult{}, false
+		return LogResult{Provider: "vercel", Source: source}, false, true
 	}
 	if err != nil || deploymentID == "" {
-		return LogResult{}, false
+		return LogResult{}, false, false
 	}
 	lines, err := vercelDeploymentEvents(ctx, spec, token, deploymentID)
 	if isVercelAuthError(err) {
 		logAuthStrategyFailed(source)
-		return LogResult{}, false
+		return LogResult{Provider: "vercel", Source: source}, false, true
 	}
 	if err != nil || len(lines) == 0 {
-		return LogResult{}, false
+		return LogResult{}, false, false
 	}
 	lines, truncated := truncateLines(lines)
 	return LogResult{
@@ -77,7 +139,7 @@ func fetchVercelLogs(ctx context.Context, spec *provider.Spec, token, project, s
 		Source:    source,
 		Provider:  "vercel",
 		Truncated: truncated,
-	}, true
+	}, true, false
 }
 
 func vercelLatestDeploymentID(ctx context.Context, spec *provider.Spec, token, project string) (string, error) {
@@ -247,12 +309,11 @@ func isVercelAuthError(err error) bool {
 }
 
 func logAuthStrategyFailed(source string) {
-	if source == "auth_file" {
+	switch source {
+	case "auth_file":
 		log.Printf("stacklogs: auth_file token invalid or expired, trying next strategy")
-		return
-	}
-	if source == "env_token" {
-		log.Printf("stacklogs: env_token invalid or expired")
+	case "env_token", "credentials_store":
+		log.Printf("stacklogs: %s token invalid or expired", source)
 	}
 }
 
