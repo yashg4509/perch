@@ -5,8 +5,10 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"strings"
@@ -54,10 +56,18 @@ func resolveVercel(ctx context.Context, nodeName string, n config.Node, reg *pro
 
 func fetchVercelLogs(ctx context.Context, spec *provider.Spec, token, project, source string) (LogResult, bool) {
 	deploymentID, err := vercelLatestDeploymentID(ctx, spec, token, project)
+	if isVercelAuthError(err) {
+		logAuthStrategyFailed(source)
+		return LogResult{}, false
+	}
 	if err != nil || deploymentID == "" {
 		return LogResult{}, false
 	}
 	lines, err := vercelDeploymentEvents(ctx, spec, token, deploymentID)
+	if isVercelAuthError(err) {
+		logAuthStrategyFailed(source)
+		return LogResult{}, false
+	}
 	if err != nil || len(lines) == 0 {
 		return LogResult{}, false
 	}
@@ -214,10 +224,36 @@ func vercelGET(ctx context.Context, spec *provider.Spec, token, path string, que
 	if err != nil {
 		return nil, err
 	}
+	if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
+		return nil, &vercelAuthError{status: resp.Status}
+	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return nil, fmt.Errorf("stacklogs: vercel http %s", resp.Status)
 	}
 	return body, nil
+}
+
+type vercelAuthError struct {
+	status string
+}
+
+func (e *vercelAuthError) Error() string {
+	return fmt.Sprintf("stacklogs: vercel auth %s", e.status)
+}
+
+func isVercelAuthError(err error) bool {
+	var authErr *vercelAuthError
+	return errors.As(err, &authErr)
+}
+
+func logAuthStrategyFailed(source string) {
+	if source == "auth_file" {
+		log.Printf("stacklogs: auth_file token invalid or expired, trying next strategy")
+		return
+	}
+	if source == "env_token" {
+		log.Printf("stacklogs: env_token invalid or expired")
+	}
 }
 
 func providerGETPath(endpoint string) (string, error) {

@@ -328,7 +328,6 @@ export function DetailPanel({ node, environment }) {
             {[
               { id: 'deployments', label: 'deployments' },
               { id: 'logs', label: 'logs' },
-              { id: 'env', label: 'env vars' },
             ].map((t) => (
               <button
                 key={t.id}
@@ -499,12 +498,6 @@ export function DetailPanel({ node, environment }) {
                   </div>
                 )}
               </div>
-            )}
-
-            {tab === 'env' && (
-              <p className="p-3 text-sm italic text-gray-500">
-                env vars are redacted — open provider dashboard to reveal
-              </p>
             )}
           </div>
         </>

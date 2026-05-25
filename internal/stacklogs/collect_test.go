@@ -103,6 +103,65 @@ func TestResolve_Vercel_EnvToken(t *testing.T) {
 	}
 }
 
+func TestResolve_Vercel_403Fallthrough(t *testing.T) {
+	restore := swapPlatformHooks(t)
+	defer restore()
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		auth := r.Header.Get("Authorization")
+		switch {
+		case auth == "Bearer vca_bad":
+			w.WriteHeader(http.StatusForbidden)
+			return
+		case auth == "Bearer env_tok":
+			switch r.URL.Path {
+			case "/v6/deployments":
+				_, _ = io.WriteString(w, `{"deployments":[{"uid":"dpl_env"}]}`)
+			case "/v2/deployments/dpl_env/events":
+				_, _ = io.WriteString(w, `[{"type":"stdout","text":"env after 403 fallthrough"}]`)
+			default:
+				t.Fatalf("path %s", r.URL.Path)
+			}
+		default:
+			t.Fatalf("unexpected auth %q path %s", auth, r.URL.Path)
+		}
+	}))
+	t.Cleanup(srv.Close)
+
+	tmp := t.TempDir()
+	platformHooks.userHomeDir = func() (string, error) { return tmp, nil }
+	authPath := vercelAuthFilePath()
+	if authPath == "" {
+		t.Skip("no vercel auth path on this OS")
+	}
+	if err := os.MkdirAll(filepath.Dir(authPath), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(authPath, []byte(`{"token":"vca_bad"}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	platformHooks.readFile = os.ReadFile
+	platformHooks.getenv = func(k string) string {
+		if k == "VERCEL_TOKEN" {
+			return "env_tok"
+		}
+		return ""
+	}
+	platformHooks.repoSlug = func() (string, string, bool) { return "", "", false }
+
+	reg := vercelRegistry(t, srv.URL)
+	got, err := Resolve(context.Background(), "web", config.Node{Provider: "vercel", Project: "demo"}, reg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Source != "env_token" {
+		t.Fatalf("source=%q want env_token", got.Source)
+	}
+	if len(got.Lines) != 1 || got.Lines[0] != "env after 403 fallthrough" {
+		t.Fatalf("lines=%v", got.Lines)
+	}
+}
+
 func TestResolve_Vercel_GitHubActions(t *testing.T) {
 	restore := swapPlatformHooks(t)
 	defer restore()
