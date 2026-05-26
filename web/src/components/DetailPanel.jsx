@@ -160,8 +160,8 @@ function dashboardURLForLogsSetup(node, setupHint) {
   return match ? match[0] : ''
 }
 
-/** @param {{ node: object, setupHint: string, onRefresh: () => void | Promise<void>, refreshing: boolean }} props */
-function LogsSetupConnect({ node, setupHint, onRefresh, refreshing }) {
+/** @param {{ node: object, setupHint: string, strategiesTried?: { name?: string, result?: string }[], onRefresh: () => void | Promise<void>, refreshing: boolean }} props */
+function LogsSetupConnect({ node, setupHint, strategiesTried, onRefresh, refreshing }) {
   const [tokenInput, setTokenInput] = useState('')
   const [connecting, setConnecting] = useState(false)
   const [connectError, setConnectError] = useState(null)
@@ -169,6 +169,9 @@ function LogsSetupConnect({ node, setupHint, onRefresh, refreshing }) {
   const providerCredentialKey = credentialKeyForNode(node)
   const dashboardUrl = dashboardURLForLogsSetup(node, setupHint)
   const providerLabel = providerTitle(node?.provider ?? '')
+  const tokenExpired = Array.isArray(strategiesTried)
+    ? strategiesTried.some((s) => String(s?.result ?? '') === 'token_expired')
+    : false
 
   async function handleConnect() {
     if (!providerCredentialKey || !tokenInput.trim()) {
@@ -248,6 +251,11 @@ function LogsSetupConnect({ node, setupHint, onRefresh, refreshing }) {
           </button>
         </div>
       )}
+      {tokenExpired && (
+        <p className="text-sm text-red-600">
+          Your token was saved, but the provider API rejected it (unauthorized). Create a new token and try again.
+        </p>
+      )}
       {connectError && <p className="text-sm text-red-600">{connectError}</p>}
       <button
         type="button"
@@ -273,6 +281,7 @@ function ProviderLogsContent({ logs, node, onRefresh, refreshing }) {
       <LogsSetupConnect
         node={node}
         setupHint={String(logs?.setup_hint ?? '')}
+        strategiesTried={logs?.strategies_tried}
         onRefresh={onRefresh}
         refreshing={refreshing}
       />
