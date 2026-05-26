@@ -33,7 +33,7 @@ edges:
 	if err != nil {
 		t.Fatal(err)
 	}
-	rep := graph.NewJSONReport(g)
+	rep := graph.NewJSONReport(g, reg)
 	out, err := json.Marshal(rep)
 	if err != nil {
 		t.Fatal(err)

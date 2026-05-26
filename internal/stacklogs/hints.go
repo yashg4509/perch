@@ -16,11 +16,6 @@ func buildSetupHint(spec *provider.Spec) string {
 		hint.WriteString(u)
 		hint.WriteString("\n")
 	}
-	if ev := strings.TrimSpace(spec.Credentials.EnvVar); ev != "" {
-		hint.WriteString("Paste token in here: export ")
-		hint.WriteString(ev)
-		hint.WriteString("=your_token_here")
-	}
 	if hint.Len() == 0 {
 		hint.WriteString(strings.TrimSpace(spec.Credentials.Prompt))
 	}

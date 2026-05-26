@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -122,6 +123,57 @@ func TestServeLogsJSON_ValidationErrors(t *testing.T) {
 				if got["setup_hint"] == "" {
 					t.Fatalf("expected setup_hint in %v", got)
 				}
+			}
+		})
+	}
+}
+
+func TestServeCredentialsPost(t *testing.T) {
+	dir := writeVizTestStack(t)
+	t.Chdir(dir)
+	t.Setenv("HOME", t.TempDir())
+
+	body := `{"key":"vercel_token","token":"vca_test_secret"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/credentials", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rr := httptest.NewRecorder()
+
+	serveCredentialsPost(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status=%d body=%s", rr.Code, rr.Body.String())
+	}
+	var got map[string]any
+	if err := json.Unmarshal(rr.Body.Bytes(), &got); err != nil {
+		t.Fatal(err)
+	}
+	if got["ok"] != true {
+		t.Fatalf("got=%v", got)
+	}
+}
+
+func TestServeCredentialsPost_validation(t *testing.T) {
+	dir := writeVizTestStack(t)
+	t.Chdir(dir)
+	t.Setenv("HOME", t.TempDir())
+
+	tests := []struct {
+		name   string
+		body   string
+		status int
+	}{
+		{name: "unknown key", body: `{"key":"bogus","token":"x"}`, status: http.StatusBadRequest},
+		{name: "empty key", body: `{"key":"","token":"x"}`, status: http.StatusBadRequest},
+		{name: "empty token", body: `{"key":"vercel_token","token":""}`, status: http.StatusBadRequest},
+		{name: "invalid json", body: `{`, status: http.StatusBadRequest},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodPost, "/api/credentials", strings.NewReader(tc.body))
+			req.Header.Set("Content-Type", "application/json")
+			rr := httptest.NewRecorder()
+			serveCredentialsPost(rr, req)
+			if rr.Code != tc.status {
+				t.Fatalf("status=%d want=%d body=%s", rr.Code, tc.status, rr.Body.String())
 			}
 		})
 	}

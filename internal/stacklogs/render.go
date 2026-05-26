@@ -133,14 +133,38 @@ func fetchRenderLogs(ctx context.Context, spec *provider.Spec, token, service, s
 }
 
 func renderServiceLogs(ctx context.Context, spec *provider.Spec, token, service string) ([]string, error) {
-	path := fmt.Sprintf("/services/%s/logs", url.PathEscape(service))
+	ownerID, err := renderServiceOwnerID(ctx, spec, token, service)
+	if err != nil {
+		return nil, err
+	}
 	q := url.Values{}
+	q.Set("ownerId", ownerID)
+	q.Add("resource", service)
 	q.Set("limit", "100")
-	body, err := renderGET(ctx, spec, token, path, q)
+	body, err := renderGET(ctx, spec, token, "/logs", q)
 	if err != nil {
 		return nil, err
 	}
 	return parseRenderLogs(body)
+}
+
+func renderServiceOwnerID(ctx context.Context, spec *provider.Spec, token, service string) (string, error) {
+	path := fmt.Sprintf("/services/%s", url.PathEscape(service))
+	body, err := renderGET(ctx, spec, token, path, nil)
+	if err != nil {
+		return "", err
+	}
+	var svc struct {
+		OwnerID string `json:"ownerId"`
+	}
+	if err := json.Unmarshal(body, &svc); err != nil {
+		return "", err
+	}
+	ownerID := strings.TrimSpace(svc.OwnerID)
+	if ownerID == "" {
+		return "", fmt.Errorf("stacklogs: render service %q missing ownerId", service)
+	}
+	return ownerID, nil
 }
 
 func parseRenderLogs(body []byte) ([]string, error) {

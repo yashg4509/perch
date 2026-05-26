@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useNodeLogs } from '../hooks/useNodeLogs.js'
 import { buildErrorPrompt, isErroredNode, openInAIWithFallback } from '../lib/aiHandoff.js'
+import { credentialKeyForNode } from '../lib/mappers.js'
 import { DeployRow } from './DeployRow.jsx'
 
 function providerTitle(provider) {
@@ -145,8 +146,123 @@ function SetupHint({ hint }) {
   )
 }
 
-/** @param {{ logs: object, onRefresh: () => void, refreshing: boolean }} props */
-function ProviderLogsContent({ logs, onRefresh, refreshing }) {
+/**
+ * @param {object | undefined} node
+ * @param {string} setupHint
+ * @returns {string}
+ */
+function dashboardURLForLogsSetup(node, setupHint) {
+  const fromNode = String(node?.credentialsDashboardUrl ?? '').trim()
+  if (fromNode !== '') {
+    return fromNode
+  }
+  const match = String(setupHint ?? '').match(/https?:\/\/\S+/)
+  return match ? match[0] : ''
+}
+
+/** @param {{ node: object, setupHint: string, onRefresh: () => void | Promise<void>, refreshing: boolean }} props */
+function LogsSetupConnect({ node, setupHint, onRefresh, refreshing }) {
+  const [tokenInput, setTokenInput] = useState('')
+  const [connecting, setConnecting] = useState(false)
+  const [connectError, setConnectError] = useState(null)
+
+  const providerCredentialKey = credentialKeyForNode(node)
+  const dashboardUrl = dashboardURLForLogsSetup(node, setupHint)
+  const providerLabel = providerTitle(node?.provider ?? '')
+
+  async function handleConnect() {
+    if (!providerCredentialKey || !tokenInput.trim()) {
+      return
+    }
+    setConnecting(true)
+    setConnectError(null)
+    try {
+      const res = await fetch('/api/credentials', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          key: providerCredentialKey,
+          token: tokenInput.trim(),
+        }),
+      })
+      const text = await res.text()
+      if (!res.ok) {
+        let msg = text
+        try {
+          const data = text !== '' ? JSON.parse(text) : null
+          if (data?.error) {
+            msg = String(data.error)
+          }
+        } catch {
+          // keep raw text
+        }
+        throw new Error(msg || res.statusText || 'request failed')
+      }
+      setTokenInput('')
+      await onRefresh()
+    } catch (e) {
+      setConnectError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setConnecting(false)
+    }
+  }
+
+  const promptOnly =
+    dashboardUrl === '' &&
+    providerCredentialKey === '' &&
+    String(setupHint ?? '').trim() !== ''
+
+  return (
+    <div className="space-y-3">
+      {dashboardUrl !== '' && (
+        <p className="text-sm text-gray-800">
+          Get token from here:{' '}
+          <a
+            href={dashboardUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-600 underline hover:text-blue-800"
+          >
+            Open {providerLabel} dashboard →
+          </a>
+        </p>
+      )}
+      {promptOnly && <SetupHint hint={setupHint} />}
+      {providerCredentialKey !== '' && (
+        <div className="mt-3 space-y-2">
+          <input
+            type="password"
+            placeholder="Paste API token here"
+            value={tokenInput}
+            onChange={(e) => setTokenInput(e.target.value)}
+            autoComplete="off"
+            className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 font-mono text-sm text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          />
+          <button
+            type="button"
+            onClick={() => void handleConnect()}
+            disabled={!tokenInput.trim() || connecting || refreshing}
+            className="rounded-md bg-gray-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {connecting ? 'Connecting...' : 'Connect'}
+          </button>
+        </div>
+      )}
+      {connectError && <p className="text-sm text-red-600">{connectError}</p>}
+      <button
+        type="button"
+        onClick={() => void onRefresh()}
+        disabled={refreshing || connecting}
+        className="rounded-md border border-gray-300 bg-white px-2.5 py-1 text-xs font-medium text-gray-800 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+      >
+        Retry
+      </button>
+    </div>
+  )
+}
+
+/** @param {{ logs: object, node: object, onRefresh: () => void | Promise<void>, refreshing: boolean }} props */
+function ProviderLogsContent({ logs, node, onRefresh, refreshing }) {
   const source = String(logs?.source ?? '')
   const stdoutLines = Array.isArray(logs?.stdout_lines)
     ? logs.stdout_lines.map((s) => String(s ?? ''))
@@ -154,17 +270,12 @@ function ProviderLogsContent({ logs, onRefresh, refreshing }) {
 
   if (source === 'none') {
     return (
-      <div className="space-y-3">
-        <SetupHint hint={String(logs?.setup_hint ?? '')} />
-        <button
-          type="button"
-          onClick={onRefresh}
-          disabled={refreshing}
-          className="rounded-md border border-gray-300 bg-white px-2.5 py-1 text-xs font-medium text-gray-800 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          Retry
-        </button>
-      </div>
+      <LogsSetupConnect
+        node={node}
+        setupHint={String(logs?.setup_hint ?? '')}
+        onRefresh={onRefresh}
+        refreshing={refreshing}
+      />
     )
   }
 
@@ -239,7 +350,12 @@ function ProviderLogsTab({ node, environment, logs, loading, error, fetchLogs })
 
   return (
     <div className="space-y-3">
-      <ProviderLogsContent logs={logs} onRefresh={() => void fetchLogs()} refreshing={loading} />
+      <ProviderLogsContent
+        logs={logs}
+        node={node}
+        onRefresh={() => fetchLogs()}
+        refreshing={loading}
+      />
       {showAIActions && (
         <ProviderLogsAIActions node={node} environment={environment} logsResult={logsResultForAI} />
       )}

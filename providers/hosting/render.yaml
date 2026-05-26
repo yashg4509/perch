@@ -18,6 +18,7 @@ api:
   base_url: "https://api.render.com/v1"
   auth_header: "Authorization: Bearer {token}"
   endpoints:
+    logs: "GET /logs"
     status: "GET /services/{service}"
     env_list: "GET /services/{service}/env-vars"
     list_resources: "GET /services"

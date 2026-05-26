@@ -90,13 +90,23 @@ func TestResolve_Render_AuthFile(t *testing.T) {
 		if r.Header.Get("Authorization") != "Bearer render_tok" {
 			t.Fatalf("auth %q", r.Header.Get("Authorization"))
 		}
-		if !strings.HasSuffix(r.URL.Path, "/services/srv-test/logs") {
+		switch {
+		case strings.HasSuffix(r.URL.Path, "/services/srv-test"):
+			_, _ = io.WriteString(w, `{"id":"srv-test","ownerId":"own-test"}`)
+		case r.URL.Path == "/logs" || strings.HasSuffix(r.URL.Path, "/logs"):
+			if r.URL.Query().Get("ownerId") != "own-test" {
+				t.Fatalf("ownerId=%q", r.URL.Query().Get("ownerId"))
+			}
+			if r.URL.Query().Get("resource") != "srv-test" {
+				t.Fatalf("resource=%q", r.URL.Query().Get("resource"))
+			}
+			if r.URL.Query().Get("limit") != "100" {
+				t.Fatalf("limit=%q", r.URL.Query().Get("limit"))
+			}
+			_, _ = io.WriteString(w, `{"logs":[{"message":"render log line"}]}`)
+		default:
 			t.Fatalf("path %s", r.URL.Path)
 		}
-		if r.URL.Query().Get("limit") != "100" {
-			t.Fatalf("limit=%q", r.URL.Query().Get("limit"))
-		}
-		_, _ = io.WriteString(w, `{"logs":[{"message":"render log line"}]}`)
 	}))
 	t.Cleanup(srv.Close)
 
