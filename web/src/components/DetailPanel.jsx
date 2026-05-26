@@ -170,22 +170,18 @@ function ProviderLogsContent({ logs, onRefresh, refreshing }) {
 
   return (
     <div className="space-y-2">
-      <div className="relative">
-        {source !== '' && (
-          <span className="absolute right-0 top-0 rounded bg-gray-100 px-1.5 py-0.5 text-[10px] text-gray-500">
-            source: {source}
-          </span>
+      <pre className="max-h-[400px] overflow-auto rounded-md bg-gray-900 p-2 font-mono text-xs leading-relaxed text-gray-100">
+        {stdoutLines.length === 0 ? (
+          <div className="text-gray-400">No log lines returned.</div>
+        ) : (
+          stdoutLines.map((line, i) => <div key={`${i}-${line.slice(0, 16)}`}>{line}</div>)
         )}
-        <pre className="max-h-[400px] overflow-auto rounded-md bg-gray-900 p-2 font-mono text-xs leading-relaxed text-gray-100">
-          {stdoutLines.length === 0 ? (
-            <div className="text-gray-400">No log lines returned.</div>
-          ) : (
-            stdoutLines.map((line, i) => <div key={`${i}-${line.slice(0, 16)}`}>{line}</div>)
-          )}
-        </pre>
-      </div>
-      {logs?.truncated && <p className="text-xs text-amber-700">Output truncated</p>}
-      {logs?.timed_out && <p className="text-xs text-amber-700">Command timed out</p>}
+        {logs?.truncated && <div className="mt-1 text-[11px] text-gray-500">[output truncated]</div>}
+        {logs?.timed_out && <div className="mt-1 text-[11px] text-gray-500">[command timed out]</div>}
+        {source !== '' && (
+          <div className="mt-2 border-t border-gray-700 pt-2 text-[11px] text-gray-500">source: {source}</div>
+        )}
+      </pre>
       <button
         type="button"
         onClick={onRefresh}
