@@ -68,7 +68,10 @@ func resolveWithFlags(ctx context.Context, nodeName string, n config.Node, reg *
 	switch prov {
 	case "vercel":
 		return resolveVercel(ctx, nodeName, n, reg, autoSetupAttempted)
-	// TODO: add supabase, render
+	case "render":
+		return resolveRenderLogs(ctx, nodeName, n, reg, autoSetupAttempted)
+	case "supabase":
+		return resolveSupabaseLogs(ctx, nodeName, n, reg, autoSetupAttempted)
 	default:
 		out.Source = "none"
 		out.SetupHint = fmt.Sprintf("Logs for provider %q are not yet supported", prov)

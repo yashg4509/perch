@@ -15,6 +15,10 @@ func AuthFileToken(spec *provider.Spec) (string, bool) {
 	switch spec.Name {
 	case "vercel":
 		return readVercelAuthToken()
+	case "render":
+		return readRenderAuthToken()
+	case "supabase":
+		return readSupabaseAuthToken()
 	default:
 		return "", false
 	}

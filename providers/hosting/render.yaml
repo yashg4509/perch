@@ -5,6 +5,9 @@ deployable: true
 
 cli:
   binary: render
+  install:
+    npm: "npm install -g @render/cli"
+  auth_cmd: "render login"
   commands:
     logs: "render logs -r {service} -o json --confirm --limit 100"
     status: "render deploys list {service} -o json --confirm"
@@ -22,3 +25,5 @@ api:
 credentials:
   key: render_api_key
   prompt: "Render API key (dashboard.render.com → Account Settings → API Keys)"
+  dashboard_url: "https://dashboard.render.com/u/settings#api-keys"
+  env_var: "RENDER_API_KEY"
