@@ -1,6 +1,7 @@
-import { X } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { Loader2, X } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { useNodeLogs } from '../hooks/useNodeLogs.js'
 import { buildErrorPrompt, isErroredNode, openInAIWithFallback } from '../lib/aiHandoff.js'
 import { DeployRow } from './DeployRow.jsx'
 
@@ -104,28 +105,224 @@ function CopyBlock({ label, text, copied, onCopy }) {
   )
 }
 
-async function fetchLogs(env, nodeName) {
-  const url = `/api/logs?env=${encodeURIComponent(env)}&node=${encodeURIComponent(nodeName)}`
-  const res = await fetch(url, { headers: { Accept: 'application/json' } })
-  const text = await res.text()
-  let body = null
-  try {
-    body = text !== '' ? JSON.parse(text) : null
-  } catch {
-    body = null
+const urlInLine = /(https?:\/\/\S+)/
+
+/** @param {{ line: string }} props */
+function SetupHintLine({ line }) {
+  const match = line.match(urlInLine)
+  if (!match) {
+    return <p>{line}</p>
   }
-  if (!res.ok) {
-    const msg = body?.error ?? res.statusText ?? 'request failed'
-    throw new Error(typeof msg === 'string' ? msg : JSON.stringify(msg))
+  const url = match[1]
+  const idx = line.indexOf(url)
+  return (
+    <p>
+      {line.slice(0, idx)}
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-blue-600 underline hover:text-blue-800"
+      >
+        {url}
+      </a>
+      {line.slice(idx + url.length)}
+    </p>
+  )
+}
+
+/** @param {{ hint: string }} props */
+function SetupHint({ hint }) {
+  const lines = String(hint ?? '')
+    .split('\n')
+    .filter((l) => l.length > 0)
+  return (
+    <div className="space-y-2 text-sm text-gray-800">
+      {lines.map((line, i) => (
+        <SetupHintLine key={`${i}-${line.slice(0, 24)}`} line={line} />
+      ))}
+    </div>
+  )
+}
+
+/** @param {{ logs: object, onRefresh: () => void, refreshing: boolean }} props */
+function ProviderLogsContent({ logs, onRefresh, refreshing }) {
+  const source = String(logs?.source ?? '')
+  const stdoutLines = Array.isArray(logs?.stdout_lines)
+    ? logs.stdout_lines.map((s) => String(s ?? ''))
+    : []
+
+  if (source === 'none') {
+    return (
+      <div className="space-y-3">
+        <SetupHint hint={String(logs?.setup_hint ?? '')} />
+        <button
+          type="button"
+          onClick={onRefresh}
+          disabled={refreshing}
+          className="rounded-md border border-gray-300 bg-white px-2.5 py-1 text-xs font-medium text-gray-800 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          Retry
+        </button>
+      </div>
+    )
   }
-  return {
-    stdoutLines: Array.isArray(body?.stdout_lines) ? body.stdout_lines.map((s) => String(s ?? '')) : [],
-    stderrLines: Array.isArray(body?.stderr_lines) ? body.stderr_lines.map((s) => String(s ?? '')) : [],
-    exitCode: Number.isInteger(body?.exit_code) ? body.exit_code : 0,
-    truncated: Boolean(body?.truncated),
-    timedOut: Boolean(body?.timed_out),
-    runError: body?.run_error != null ? String(body.run_error) : '',
+
+  return (
+    <div className="space-y-2">
+      <div className="relative">
+        {source !== '' && (
+          <span className="absolute right-0 top-0 rounded bg-gray-100 px-1.5 py-0.5 text-[10px] text-gray-500">
+            source: {source}
+          </span>
+        )}
+        <pre className="max-h-[400px] overflow-auto rounded-md bg-gray-900 p-2 font-mono text-xs leading-relaxed text-gray-100">
+          {stdoutLines.length === 0 ? (
+            <div className="text-gray-400">No log lines returned.</div>
+          ) : (
+            stdoutLines.map((line, i) => <div key={`${i}-${line.slice(0, 16)}`}>{line}</div>)
+          )}
+        </pre>
+      </div>
+      {logs?.truncated && <p className="text-xs text-amber-700">Output truncated</p>}
+      {logs?.timed_out && <p className="text-xs text-amber-700">Command timed out</p>}
+      <button
+        type="button"
+        onClick={onRefresh}
+        disabled={refreshing}
+        className="rounded-md border border-gray-300 bg-white px-2.5 py-1 text-xs font-medium text-gray-800 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+      >
+        Refresh
+      </button>
+    </div>
+  )
+}
+
+/** @param {{ node: object, environment: string, logs: object | null, loading: boolean, error: string | null, fetchLogs: () => void }} props */
+function ProviderLogsTab({ node, environment, logs, loading, error, fetchLogs }) {
+  const logsResultForAI =
+    logs != null
+      ? {
+          stdoutLines: Array.isArray(logs.stdout_lines)
+            ? logs.stdout_lines.map((s) => String(s ?? ''))
+            : [],
+          stderrLines: Array.isArray(logs.stderr_lines)
+            ? logs.stderr_lines.map((s) => String(s ?? ''))
+            : [],
+        }
+      : null
+  const showAIActions = isErroredNode(node)
+
+  if (loading) {
+    return (
+      <div className="flex items-center gap-2 text-sm text-gray-600">
+        <Loader2 className="h-4 w-4 animate-spin text-gray-500" strokeWidth={2} />
+        Fetching logs...
+      </div>
+    )
   }
+
+  if (error) {
+    return (
+      <div className="space-y-2">
+        <p className="text-sm text-red-600">Failed to fetch logs: {error}</p>
+        <button
+          type="button"
+          onClick={() => void fetchLogs()}
+          className="rounded-md border border-gray-300 bg-white px-2.5 py-1 text-xs font-medium text-gray-800 hover:bg-gray-50"
+        >
+          Retry
+        </button>
+      </div>
+    )
+  }
+
+  if (logs == null) {
+    return <p className="text-sm text-gray-500">Open this tab to load logs.</p>
+  }
+
+  return (
+    <div className="space-y-3">
+      <ProviderLogsContent logs={logs} onRefresh={() => void fetchLogs()} refreshing={loading} />
+      {showAIActions && (
+        <ProviderLogsAIActions node={node} environment={environment} logsResult={logsResultForAI} />
+      )}
+    </div>
+  )
+}
+
+/** @param {{ node: object, environment: string, logsResult: object | null }} props */
+function ProviderLogsAIActions({ node, environment, logsResult }) {
+  const [copyWhich, setCopyWhich] = useState(null)
+  const [handoffStatus, setHandoffStatus] = useState('')
+  const [openInMenuOpen, setOpenInMenuOpen] = useState(false)
+
+  const copyText = async (which, text) => {
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopyWhich(which)
+      window.setTimeout(() => setCopyWhich(null), 2000)
+    } catch {
+      setCopyWhich(null)
+    }
+  }
+
+  const openAI = async (tool) => {
+    const prompt = buildErrorPrompt({ node, environment, logsResult })
+    try {
+      const result = await openInAIWithFallback({ tool, prompt })
+      if (result.mode === 'deep_link') {
+        setHandoffStatus(`Opened ${tool}`)
+      } else {
+        setHandoffStatus(`Prompt copied for ${tool}`)
+      }
+    } catch {
+      setHandoffStatus(`Could not open ${tool}; copy failed`)
+    }
+    setOpenInMenuOpen(false)
+    window.setTimeout(() => setHandoffStatus(''), 2500)
+  }
+
+  return (
+    <div className="border-t border-gray-100 pt-2">
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={() => {
+            const prompt = buildErrorPrompt({ node, environment, logsResult })
+            void copyText('prompt', prompt)
+          }}
+          className="rounded-md border border-gray-300 bg-white px-2.5 py-1 text-xs font-medium text-gray-800 hover:bg-gray-50"
+        >
+          {copyWhich === 'prompt' ? 'Prompt copied' : 'Copy prompt'}
+        </button>
+        <div className="relative inline-block">
+          <button
+            type="button"
+            onClick={() => setOpenInMenuOpen((v) => !v)}
+            className="rounded-md border border-gray-300 bg-white px-2.5 py-1 text-xs font-medium text-gray-800 hover:bg-gray-50"
+          >
+            Open in
+          </button>
+          {openInMenuOpen && (
+            <div className="absolute z-20 mt-1 min-w-[180px] rounded-md border border-gray-200 bg-white p-1 shadow-lg">
+              {['codex', 'cursor', 'claude'].map((tool) => (
+                <button
+                  key={tool}
+                  type="button"
+                  onClick={() => void openAI(tool)}
+                  className="block w-full rounded px-2 py-1.5 text-left text-xs capitalize text-gray-800 hover:bg-gray-50"
+                >
+                  {tool === 'claude' ? 'Claude Code' : tool}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+      {handoffStatus !== '' && <p className="mt-2 text-xs text-gray-500">{handoffStatus}</p>}
+    </div>
+  )
 }
 
 /** @param {{ node: object | null, environment: string }} props */
@@ -134,11 +331,12 @@ export function DetailPanel({ node, environment }) {
   const navigate = useNavigate()
   const [tab, setTab] = useState('deployments')
   const [copyWhich, setCopyWhich] = useState(null)
-  const [logsLoading, setLogsLoading] = useState(false)
-  const [logsError, setLogsError] = useState('')
-  const [logsResult, setLogsResult] = useState(null)
-  const [handoffStatus, setHandoffStatus] = useState('')
-  const [openInMenuOpen, setOpenInMenuOpen] = useState(false)
+  const logsTabFetched = useRef(false)
+  const isCustom = (node?.provider ?? '').toLowerCase() === 'custom'
+  const { logs, loading: logsLoading, error: logsError, fetchLogs } = useNodeLogs(
+    isCustom ? undefined : node?.id,
+    environment,
+  )
 
   const close = () => {
     navigate(`/stack/${stackName}`)
@@ -154,14 +352,11 @@ export function DetailPanel({ node, environment }) {
 
   useEffect(() => {
     setCopyWhich(null)
-    setHandoffStatus('')
-    setOpenInMenuOpen(false)
+    logsTabFetched.current = false
   }, [node?.id, tab])
 
   useEffect(() => {
-    setLogsLoading(false)
-    setLogsError('')
-    setLogsResult(null)
+    logsTabFetched.current = false
   }, [node?.id, environment])
 
   const deployments = node ? buildDeploymentRows(node, environment) : []
@@ -169,7 +364,6 @@ export function DetailPanel({ node, environment }) {
   const statusCmd = node?.statusCommand != null ? String(node.statusCommand).trim() : ''
   const hasLogsCommand = logsCmd !== ''
   const hasStatusCommand = statusCmd !== ''
-  const showAIActions = node != null && isErroredNode(node)
 
   const region = node ? metaLookup(node.meta, 'region') : '—'
   const branch = node ? metaLookup(node.meta, 'branch') : '—'
@@ -189,40 +383,12 @@ export function DetailPanel({ node, environment }) {
     }
   }
 
-  const runLogs = async () => {
-    if (!node?.id) {
-      return
+  const selectTab = (id) => {
+    setTab(id)
+    if (id === 'logs' && node && !isCustom && !logsTabFetched.current) {
+      logsTabFetched.current = true
+      void fetchLogs()
     }
-    setLogsLoading(true)
-    setLogsError('')
-    try {
-      const next = await fetchLogs(environment, node.id)
-      setLogsResult(next)
-    } catch (e) {
-      setLogsError(e instanceof Error ? e.message : String(e))
-      setLogsResult(null)
-    } finally {
-      setLogsLoading(false)
-    }
-  }
-
-  const openAI = async (tool) => {
-    if (!node) {
-      return
-    }
-    const prompt = buildErrorPrompt({ node, environment, logsResult })
-    try {
-      const result = await openInAIWithFallback({ tool, prompt })
-      if (result.mode === 'deep_link') {
-        setHandoffStatus(`Opened ${tool}`)
-      } else {
-        setHandoffStatus(`Prompt copied for ${tool}`)
-      }
-    } catch {
-      setHandoffStatus(`Could not open ${tool}; copy failed`)
-    }
-    setOpenInMenuOpen(false)
-    window.setTimeout(() => setHandoffStatus(''), 2500)
   }
 
   const recentList = node && Array.isArray(node.recentErrors) ? node.recentErrors.filter((s) => String(s).trim() !== '') : []
@@ -332,7 +498,7 @@ export function DetailPanel({ node, environment }) {
               <button
                 key={t.id}
                 type="button"
-                onClick={() => setTab(t.id)}
+                onClick={() => selectTab(t.id)}
                 className={`flex-1 border-r border-gray-200 px-2 py-2 capitalize last:border-r-0 hover:bg-gray-50 hover:text-gray-900 ${
                   tab === t.id ? 'bg-gray-50 text-gray-900' : ''
                 }`}
@@ -348,7 +514,7 @@ export function DetailPanel({ node, environment }) {
                 {deployments.length === 0 ? (
                   <div className="space-y-2 p-3 text-sm text-gray-600">
                     <p className="font-medium text-gray-800">No deployment data</p>
-                    {(node.provider ?? '').toLowerCase() === 'custom' ? (
+                    {isCustom ? (
                       <p>
                         Custom nodes only expose health from the <span className="font-mono text-xs">status:</span> shell
                         exit code right now. Last deploy and recent errors are not filled for this provider yet.
@@ -375,127 +541,36 @@ export function DetailPanel({ node, environment }) {
 
             {tab === 'logs' && (
               <div className="p-3 text-sm text-gray-700">
-                <p className="text-xs text-gray-500">
-                  Commands from perch.yaml (same as the TUI). Run locally in your shell; nothing is executed from the
-                  browser.
-                </p>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() => void runLogs()}
-                    disabled={!node?.id || logsLoading}
-                    className="rounded-md border border-gray-300 bg-white px-2.5 py-1 text-xs font-medium text-gray-800 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {logsLoading ? 'Running...' : 'Run logs'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const prompt = buildErrorPrompt({ node, environment, logsResult })
-                      void copyText('prompt', prompt)
-                    }}
-                    className="rounded-md border border-gray-300 bg-white px-2.5 py-1 text-xs font-medium text-gray-800 hover:bg-gray-50"
-                  >
-                    {copyWhich === 'prompt' ? 'Prompt copied' : 'Copy prompt'}
-                  </button>
-                </div>
-                {showAIActions && (
-                  <div className="relative mt-2 inline-block">
-                    <button
-                      type="button"
-                      onClick={() => setOpenInMenuOpen((v) => !v)}
-                      className="rounded-md border border-gray-300 bg-white px-2.5 py-1 text-xs font-medium text-gray-800 hover:bg-gray-50"
-                    >
-                      Open in
-                    </button>
-                    {openInMenuOpen && (
-                      <div className="absolute z-20 mt-1 min-w-[180px] rounded-md border border-gray-200 bg-white p-1 shadow-lg">
-                        <button
-                          type="button"
-                          onClick={() => void openAI('codex')}
-                          className="block w-full rounded px-2 py-1.5 text-left text-xs text-gray-800 hover:bg-gray-50"
-                        >
-                          Codex
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => void openAI('cursor')}
-                          className="block w-full rounded px-2 py-1.5 text-left text-xs text-gray-800 hover:bg-gray-50"
-                        >
-                          Cursor
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => void openAI('claude')}
-                          className="block w-full rounded px-2 py-1.5 text-left text-xs text-gray-800 hover:bg-gray-50"
-                        >
-                          Claude Code
-                        </button>
-                      </div>
+                {isCustom ? (
+                  <>
+                    {hasStatusCommand && (
+                      <CopyBlock
+                        label="Health check (status:)"
+                        text={statusCmd}
+                        copied={copyWhich === 'status'}
+                        onCopy={() => void copyText('status', statusCmd)}
+                      />
                     )}
-                  </div>
-                )}
-                {handoffStatus !== '' && <p className="mt-2 text-xs text-gray-500">{handoffStatus}</p>}
-                {logsError !== '' && <p className="mt-2 text-xs text-red-600">{logsError}</p>}
-                {logsResult && (
-                  <div className="mt-3 space-y-2">
-                    {logsResult.runError !== '' && (
-                      <p className="rounded-md border border-red-200 bg-red-50 px-2 py-1 text-xs text-red-700">
-                        {logsResult.runError}
-                      </p>
+                    {hasLogsCommand ? (
+                      <CopyBlock
+                        label="Tail logs (logs:)"
+                        text={logsCmd}
+                        copied={copyWhich === 'logs'}
+                        onCopy={() => void copyText('logs', logsCmd)}
+                      />
+                    ) : (
+                      <p className="text-sm text-gray-600">No log command configured for this node.</p>
                     )}
-                    {(logsResult.timedOut || logsResult.truncated) && (
-                      <p className="rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-xs text-amber-800">
-                        {logsResult.timedOut ? 'Command timed out. ' : ''}
-                        {logsResult.truncated ? 'Output truncated.' : ''}
-                      </p>
-                    )}
-                    <div className="text-xs text-gray-500">Exit code: {logsResult.exitCode}</div>
-                    <CopyBlock
-                      label="stderr"
-                      text={logsResult.stderrLines.join('\n')}
-                      copied={copyWhich === 'stderr-out'}
-                      onCopy={() => void copyText('stderr-out', logsResult.stderrLines.join('\n'))}
-                    />
-                    <CopyBlock
-                      label="stdout"
-                      text={logsResult.stdoutLines.join('\n')}
-                      copied={copyWhich === 'stdout-out'}
-                      onCopy={() => void copyText('stdout-out', logsResult.stdoutLines.join('\n'))}
-                    />
-                    {logsResult.stdoutLines.length === 0 && logsResult.stderrLines.length === 0 && (
-                      <p className="text-xs text-gray-500">No output returned for this run.</p>
-                    )}
-                  </div>
-                )}
-                {hasStatusCommand && (
-                  <CopyBlock
-                    label="Health check (status:)"
-                    text={statusCmd}
-                    copied={copyWhich === 'status'}
-                    onCopy={() => void copyText('status', statusCmd)}
+                  </>
+                ) : (
+                  <ProviderLogsTab
+                    node={node}
+                    environment={environment}
+                    logs={logs}
+                    loading={logsLoading}
+                    error={logsError}
+                    fetchLogs={fetchLogs}
                   />
-                )}
-                {hasLogsCommand && (
-                  <CopyBlock
-                    label="Tail logs (logs:)"
-                    text={logsCmd}
-                    copied={copyWhich === 'logs'}
-                    onCopy={() => void copyText('logs', logsCmd)}
-                  />
-                )}
-                {!hasStatusCommand && !hasLogsCommand && (
-                  <div className="mt-2 space-y-2 text-sm text-gray-600">
-                    <p>No <span className="font-mono text-xs">status:</span> or <span className="font-mono text-xs">logs:</span> shell lines for this node in perch.yaml.</p>
-                    {(node.provider ?? '').toLowerCase() !== 'custom' && (
-                      <p className="text-xs text-gray-500">
-                        Platform nodes use provider APIs, not YAML shell hooks. Try environment{' '}
-                        <span className="font-semibold text-gray-700">dev</span> in this example stack to see sample{' '}
-                        <span className="font-mono text-[11px]">status:</span> / <span className="font-mono text-[11px]">logs:</span>{' '}
-                        on <span className="font-mono text-[11px]">web</span>, <span className="font-mono text-[11px]">api</span>, etc.
-                      </p>
-                    )}
-                  </div>
                 )}
               </div>
             )}
