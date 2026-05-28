@@ -2,6 +2,8 @@ package graph
 
 import (
 	"sort"
+
+	"github.com/yashg4509/perch/internal/config"
 )
 
 // JSONReport is the `perch graph --json` payload (topology; health reserved for later).
@@ -19,6 +21,7 @@ type JSONNode struct {
 	Name       string `json:"name"`
 	Provider   string `json:"provider"`
 	Deployable bool   `json:"deployable"`
+	Configured bool   `json:"configured"`
 	Project    string `json:"project,omitempty"`
 	Service    string `json:"service,omitempty"`
 	Status     string `json:"status,omitempty"`
@@ -54,12 +57,21 @@ func NewJSONReport(g *Graph) *JSONReport {
 
 	nodes := make([]JSONNode, len(g.Nodes))
 	for i, n := range g.Nodes {
+		proj, svc := n.Project, n.Service
+		configured := nodeConfiguredForGraph(n)
+		if config.IsPlaceholder(proj) {
+			proj = ""
+		}
+		if config.IsPlaceholder(svc) {
+			svc = ""
+		}
 		nodes[i] = JSONNode{
 			Name:       n.Name,
 			Provider:   n.Provider,
 			Deployable: n.Deployable,
-			Project:    n.Project,
-			Service:    n.Service,
+			Configured: configured,
+			Project:    proj,
+			Service:    svc,
 			Status:     n.Status,
 			Logs:       n.Logs,
 		}

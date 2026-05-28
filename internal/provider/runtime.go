@@ -26,7 +26,7 @@ func DoGETJSON(ctx context.Context, client *http.Client, spec *Spec, endpointKey
 		return err
 	}
 	path = SubstitutePlaceholders(path, vars)
-	baseStr := strings.TrimSuffix(spec.API.BaseURL, "/")
+	baseStr := SubstitutePlaceholders(strings.TrimSuffix(spec.API.BaseURL, "/"), vars)
 	full, err := joinBaseURL(baseStr, path)
 	if err != nil {
 		return err
@@ -39,6 +39,9 @@ func DoGETJSON(ctx context.Context, client *http.Client, spec *Spec, endpointKey
 	if err := ApplyAuthHeader(req, spec.API.AuthHeader, vars); err != nil {
 		return err
 	}
+	for k, v := range spec.API.StatusHeaders {
+		req.Header.Set(k, SubstitutePlaceholders(v, vars))
+	}
 	resp, err := client.Do(req)
 	if err != nil {
 		return fmt.Errorf("provider: http: %w", err)
@@ -50,6 +53,9 @@ func DoGETJSON(ctx context.Context, client *http.Client, spec *Spec, endpointKey
 	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return fmt.Errorf("provider: http %s: %s", resp.Status, truncate(body, 200))
+	}
+	if dest == nil {
+		return nil
 	}
 	return DecodeJSON(body, dest)
 }

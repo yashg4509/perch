@@ -12,3 +12,5 @@ api:
 credentials:
   key: datadog_api_key
   prompt: "Datadog API key (app.datadoghq.com → Organization Settings → API Keys); DD-APPLICATION-KEY may be required for some endpoints at runtime"
+  env_aliases:
+    - DD_API_KEY

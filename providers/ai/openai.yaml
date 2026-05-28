@@ -14,3 +14,5 @@ api:
 credentials:
   key: openai_api_key
   prompt: "OpenAI API key (platform.openai.com/api-keys)"
+  env_aliases:
+    - OPENAI_API_KEY

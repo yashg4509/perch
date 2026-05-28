@@ -80,10 +80,7 @@ func renderNodeDetail(g *graph.Graph, nodeName string, rep *stackstatus.NodeRepo
 	if rep == nil {
 		b.WriteString("Health: (no data yet — press r to refresh)\n")
 	} else {
-		st := "unhealthy"
-		if rep.Healthy {
-			st = "healthy"
-		}
+		st := healthLabel(rep)
 		fmt.Fprintf(&b, "Health: %s\n", st)
 		if rep.LastDeploy != nil {
 			sha := rep.LastDeploy.SHA
@@ -112,6 +109,27 @@ func renderNodeDetail(g *graph.Graph, nodeName string, rep *stackstatus.NodeRepo
 	}
 	b.WriteString("\nKeys: l logs · e env · d deploy · t timeline · Esc back")
 	return clipBlock(stylePanelFrame("Node detail", b.String(), width, noColor), width, height)
+}
+
+func healthLabel(rep *stackstatus.NodeReport) string {
+	if rep.Healthy {
+		if rep.StatusSource == stackstatus.SourceAppEnv {
+			return "up (app .env)"
+		}
+		return "up"
+	}
+	switch rep.StatusSource {
+	case stackstatus.SourceUnchecked:
+		return "check pending"
+	case stackstatus.SourceUnconfigured:
+		return "not in use"
+	case stackstatus.SourcePlaceholder:
+		return "pending"
+	case stackstatus.SourceAPI:
+		return "down (vendor API)"
+	default:
+		return "down"
+	}
 }
 
 func renderStubPanel(title, body string, width, height int, noColor bool) string {

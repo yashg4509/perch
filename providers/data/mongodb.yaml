@@ -7,8 +7,9 @@ api:
   base_url: "https://cloud.mongodb.com/api/atlas/v2"
   auth_header: "Authorization: Bearer {token}"
   endpoints:
-    status: "GET /groups/{project}"
+    status: "GET /groups"
     list_resources: "GET /groups"
+  status_probe: none
 
 credentials:
   key: mongodb_atlas_access_token

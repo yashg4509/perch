@@ -13,3 +13,8 @@ api:
 credentials:
   key: sentry_auth_token
   prompt: "Sentry auth token with org:read (sentry.io → Settings → Auth Tokens)"
+  env_aliases:
+    - SENTRY_AUTH_TOKEN
+
+project_env_aliases:
+  - SENTRY_PROJECT

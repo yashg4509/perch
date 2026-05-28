@@ -13,3 +13,8 @@ api:
 credentials:
   key: neon_api_key
   prompt: "Neon API key (console.neon.tech → Account settings → API keys)"
+  env_aliases:
+    - NEON_API_KEY
+
+project_env_aliases:
+  - NEON_PROJECT_ID

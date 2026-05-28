@@ -30,6 +30,24 @@ func TestJoinBaseURL_ok(t *testing.T) {
 	}
 }
 
+func TestJoinBaseURL_appendsToVersionedBase(t *testing.T) {
+	tests := []struct {
+		base, path, want string
+	}{
+		{"https://api.anthropic.com/v1", "/models", "https://api.anthropic.com/v1/models"},
+		{"https://api.clerk.com/v1", "/users?limit=1", "https://api.clerk.com/v1/users?limit=1"},
+	}
+	for _, tc := range tests {
+		u, err := joinBaseURL(tc.base, tc.path)
+		if err != nil {
+			t.Fatalf("%s + %s: %v", tc.base, tc.path, err)
+		}
+		if u.String() != tc.want {
+			t.Fatalf("%s + %s: got %s want %s", tc.base, tc.path, u.String(), tc.want)
+		}
+	}
+}
+
 func TestSameHostRedirect_blocksCrossHost(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "https://other.example/", http.StatusFound)

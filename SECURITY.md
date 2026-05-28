@@ -23,6 +23,7 @@ In scope: the `perch` binary, this repository’s code, and bundled provider YAM
 
 - `perch.yaml` must not contain API keys; credentials live under **`~/.perch/credentials`** (JSON, restrictive file permissions). Treat that file like `~/.ssh` — backup-aware, not world-readable.
 - Init and detection intentionally **do not read `.env`** files to avoid pulling secrets into logs or generated config.
+- **`perch auth sync-env`** reads a project `.env` only when you run it explicitly and writes matching keys to `~/.perch/credentials` (one-way; never writes back to `.env`). Output lists credential key names only, not values.
 
 **Custom provider (`provider: custom`)**
 

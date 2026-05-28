@@ -50,7 +50,7 @@ func runViz(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("invalid port %d", port)
 	}
 
-	_, _, err = loadStackFromWD()
+	_, _, _, err = loadStackFromWD()
 	if err != nil {
 		return err
 	}
@@ -96,29 +96,29 @@ func runViz(cmd *cobra.Command, args []string) error {
 	return srv.ListenAndServe()
 }
 
-func loadStackFromWD() (*config.Config, *provider.Registry, error) {
+func loadStackFromWD() (*config.Config, *provider.Registry, string, error) {
 	wd, err := os.Getwd()
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, "", err
 	}
 	perchPath, err := config.FindPerchYAML(wd)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, "", err
 	}
 	raw, err := os.ReadFile(perchPath)
 	if err != nil {
-		return nil, nil, fmt.Errorf("read config: %w", err)
+		return nil, nil, "", fmt.Errorf("read config: %w", err)
 	}
 	cfg, err := config.Load(raw)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, "", err
 	}
 	root := filepath.Dir(perchPath)
 	reg, err := loadRegistryForProject(root)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, "", err
 	}
-	return cfg, reg, nil
+	return cfg, reg, perchPath, nil
 }
 
 func envFromRequest(r *http.Request, defaultEnv string) string {
@@ -152,7 +152,7 @@ func writeJSONError(w http.ResponseWriter, status int, msg string) {
 
 func serveGraphJSON(w http.ResponseWriter, r *http.Request, defaultEnv string) {
 	env := envFromRequest(r, defaultEnv)
-	cfg, reg, err := loadStackFromWD()
+	cfg, reg, _, err := loadStackFromWD()
 	if err != nil {
 		writeJSONError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -172,13 +172,13 @@ func serveGraphJSON(w http.ResponseWriter, r *http.Request, defaultEnv string) {
 
 func serveStatusJSON(w http.ResponseWriter, r *http.Request, defaultEnv string) {
 	env := envFromRequest(r, defaultEnv)
-	cfg, reg, err := loadStackFromWD()
+	cfg, reg, perchPath, err := loadStackFromWD()
 	if err != nil {
 		writeJSONError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 	ctx := context.Background()
-	rep, err := stackstatus.Collect(ctx, cfg, env, reg)
+	rep, err := stackstatus.Collect(ctx, cfg, env, reg, loadCollectOptions(perchPath))
 	if err != nil {
 		if isBadEnvErr(err) {
 			writeJSONError(w, http.StatusBadRequest, err.Error())

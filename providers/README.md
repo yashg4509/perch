@@ -15,3 +15,14 @@ YAML files are grouped **by category** (flat lists were hard to scan). The `name
 - **`embed.go`** — `//go:embed` globs must list each category; add a new glob if you introduce another top-level folder.
 
 Loaders (`internal/provider`) scan **`providers/` recursively**, so a project override directory can use this layout or a single flat `providers/*.yaml` file.
+
+### Credentials and `.env`
+
+Each provider may declare:
+
+- **`credentials.env_aliases`** — app env var names for secrets. Run **`perch auth sync-env`** to import into `~/.perch/credentials` (one-way; never writes back to `.env`).
+- **`project_env_aliases`** / **`service_env_aliases`** — non-secret resource ids (index name, app id, etc.). **`perch status`** and **`perch graph`** read these from the project `.env` at runtime when `perch.yaml` still has placeholders. **`perch config sync-env`** optionally persists them into `perch.yaml`.
+- **`api.status_probe`** — `rest` (default): parallel GET on `api.endpoints.status`; `signed` (Pusher); `none` when auth is non-REST (e.g. Atlas digest).
+- **`api.status_headers`** — extra headers on status GET (e.g. `anthropic-version`, `X-Pinecone-Api-Version`, `X-GitHub-Api-Version`). These are vendor **API contract versions**, not Perch release dates—check each provider’s docs before changing them.
+
+Per-node escape hatch in `perch.yaml`: `env_project` / `env_service` name a custom `.env` key.

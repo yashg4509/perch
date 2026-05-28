@@ -32,6 +32,22 @@ func joinBaseURL(baseURL, path string) (*url.URL, error) {
 	if rel.Scheme != "" || rel.Host != "" {
 		return nil, fmt.Errorf("provider: path must be host-relative only")
 	}
+	// ResolveReference treats "/segment" as replacing the entire base path (e.g.
+	// https://api.example.com/v1 + /models → https://api.example.com/models). When
+	// base_url includes a version prefix, append the endpoint path instead.
+	if strings.HasPrefix(path, "/") && base.Path != "" && base.Path != "/" {
+		merged := strings.TrimSuffix(base.Path, "/") + rel.Path
+		full := &url.URL{
+			Scheme:   base.Scheme,
+			Host:     base.Host,
+			Path:     merged,
+			RawQuery: rel.RawQuery,
+		}
+		if !sameOrigin(full, base) {
+			return nil, fmt.Errorf("provider: resolved URL left configured origin")
+		}
+		return full, nil
+	}
 	full := base.ResolveReference(rel)
 	if !sameOrigin(full, base) {
 		return nil, fmt.Errorf("provider: resolved URL left configured origin")

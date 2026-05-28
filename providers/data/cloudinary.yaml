@@ -12,3 +12,6 @@ api:
 credentials:
   key: cloudinary_api_basic
   prompt: "Base64(api_key:api_secret) for Cloudinary Admin API (console.cloudinary.com)"
+
+project_env_aliases:
+  - CLOUDINARY_CLOUD_NAME

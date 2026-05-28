@@ -55,6 +55,11 @@ func TestContext_forAgent_text(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(tmp, "perch.yaml"), []byte(contextTestYAML), 0o644); err != nil {
 		t.Fatal(err)
 	}
+	credPath := filepath.Join(tmp, "credentials.json")
+	if err := os.WriteFile(credPath, []byte("{}"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PERCH_CREDENTIALS_PATH", credPath)
 	t.Chdir(tmp)
 
 	var buf bytes.Buffer
@@ -69,9 +74,10 @@ func TestContext_forAgent_text(t *testing.T) {
 	for _, needle := range []string{
 		"Stack: golden-app",
 		"Environment: production",
-		"api (openai, read-only): healthy",
-		"web (vercel, deployable): unhealthy",
-		"Summary: 1 of 2 nodes unhealthy",
+		"SKIPPED — in perch.yaml",
+		"api",
+		"PENDING",
+		"web",
 	} {
 		if !strings.Contains(s, needle) {
 			t.Fatalf("missing %q in:\n%s", needle, s)

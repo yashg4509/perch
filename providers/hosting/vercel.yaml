@@ -27,3 +27,8 @@ api:
 credentials:
   key: vercel_token
   prompt: "Vercel API token (vercel.com/account/tokens)"
+  env_aliases:
+    - VERCEL_TOKEN
+
+project_env_aliases:
+  - VERCEL_PROJECT_ID
