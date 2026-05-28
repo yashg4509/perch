@@ -8,14 +8,14 @@ import (
 
 func TestIsPlaceholder(t *testing.T) {
 	cases := map[string]bool{
-		"":                        true,
-		"CHANGE_ME":               true,
-		"CHANGE_ME_FOO":           true,
-		"YOUR_VERCEL_PROJECT":     true,
-		"perch-brief":             false,
-		"local-dev":               true,
-		"local-neon":              true,
-		"my-pinecone-index":       false,
+		"":                    true,
+		"CHANGE_ME":           true,
+		"CHANGE_ME_FOO":       true,
+		"YOUR_VERCEL_PROJECT": true,
+		"perch-brief":         false,
+		"local-dev":           true,
+		"local-neon":          true,
+		"my-pinecone-index":   false,
 	}
 	for in, want := range cases {
 		if got := config.IsPlaceholder(in); got != want {
