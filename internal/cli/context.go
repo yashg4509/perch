@@ -76,7 +76,7 @@ func runContext(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	rep, err := stackstatus.Collect(ctx, cfg, env, reg, stackstatus.CollectOptions{})
+	rep, err := stackstatus.Collect(ctx, cfg, env, reg, loadCollectOptions(perchPath))
 	if err != nil {
 		return err
 	}
