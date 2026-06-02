@@ -11,12 +11,12 @@ import (
 
 // Report is the loose JSON shape for `perch context --json` (extensible fields).
 type Report struct {
-	GeneratedAt  string                  `json:"generated_at"`
-	Stack        string                  `json:"stack"`
-	Environment  string                  `json:"environment"`
-	Summary      string                  `json:"summary,omitempty"`
-	Nodes        []Node                  `json:"nodes"`
-	StatusReport *stackstatus.EnvReport  `json:"-"` // for agent text formatting only
+	GeneratedAt  string                 `json:"generated_at"`
+	Stack        string                 `json:"stack"`
+	Environment  string                 `json:"environment"`
+	Summary      string                 `json:"summary,omitempty"`
+	Nodes        []Node                 `json:"nodes"`
+	StatusReport *stackstatus.EnvReport `json:"-"` // for agent text formatting only
 }
 
 // Node merges topology from the graph with live status rows.
