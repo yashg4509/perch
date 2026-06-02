@@ -13,7 +13,7 @@ import (
 
 // Status source values for [NodeReport.StatusSource].
 const (
-	SourceShell          = "shell"
+	SourceShell        = "shell"
 	SourcePlaceholder  = "placeholder"
 	SourceUnconfigured = "unconfigured"
 	SourceUnchecked    = "unchecked"
