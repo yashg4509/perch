@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Live provider status probes (`stackstatus/probe`) and vendor YAML fixes across `providers/`.
+- `perch auth sync-env` and `perch config sync-env` for credential and perch.yaml backfill from `.env`.
+- Multi-strategy log fetching (`stacklogs`) with `/api/logs` in `perch viz`; `perch logs setup` for interactive provider auth.
+- Web viz DetailPanel wired to graph/status/logs APIs; in-UI credential connect for log providers.
+- `examples/scenarios/full-platform` benchmark scenario and `docs/CODEBASE_GUIDE.md`.
+- `scripts/smoke-stack.sh` integration smoke test.
+
 - **`docs/`** — public contributor docs: [docs/providers.md](docs/providers.md), [docs/add-perch-provider-skill.md](docs/add-perch-provider-skill.md) (agent-agnostic provider workflow).
 - Open-source baseline: `LICENSE` (MIT), `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `SECURITY.md`, GitHub issue/PR templates.
 - `examples/` manual test workspace with scenarios for `perch init`, `status`, `graph`, `context`, and the root TUI.
