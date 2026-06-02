@@ -1,7 +1,6 @@
 package stackcontext
 
 import (
-	"fmt"
 	"sort"
 	"time"
 
@@ -12,11 +11,12 @@ import (
 
 // Report is the loose JSON shape for `perch context --json` (extensible fields).
 type Report struct {
-	GeneratedAt string `json:"generated_at"`
-	Stack       string `json:"stack"`
-	Environment string `json:"environment"`
-	Summary     string `json:"summary,omitempty"`
-	Nodes       []Node `json:"nodes"`
+	GeneratedAt  string                  `json:"generated_at"`
+	Stack        string                  `json:"stack"`
+	Environment  string                  `json:"environment"`
+	Summary      string                  `json:"summary,omitempty"`
+	Nodes        []Node                  `json:"nodes"`
+	StatusReport *stackstatus.EnvReport  `json:"-"` // for agent text formatting only
 }
 
 // Node merges topology from the graph with live status rows.
@@ -25,6 +25,9 @@ type Node struct {
 	Provider     string                   `json:"provider"`
 	Deployable   bool                     `json:"deployable"`
 	Healthy      bool                     `json:"healthy"`
+	StatusSource string                   `json:"status_source,omitempty"`
+	Detail       string                   `json:"detail,omitempty"`
+	Configured   bool                     `json:"configured"`
 	ErrorRate    *float64                 `json:"error_rate,omitempty"`
 	LastDeploy   *provider.DeploySnapshot `json:"last_deploy,omitempty"`
 	DailyTokens  *int64                   `json:"daily_tokens,omitempty"`
@@ -62,7 +65,6 @@ func Build(at time.Time, g *graph.Graph, rep *stackstatus.EnvReport) *Report {
 	}
 	sort.Strings(names)
 
-	unhealthy := 0
 	out.Nodes = make([]Node, 0, len(names))
 	for _, name := range names {
 		gn := gnByName[name]
@@ -70,14 +72,14 @@ func Build(at time.Time, g *graph.Graph, rep *stackstatus.EnvReport) *Report {
 		if !ok {
 			sn = stackstatus.NodeReport{Name: name, Provider: gn.Provider, Healthy: false}
 		}
-		if !sn.Healthy {
-			unhealthy++
-		}
 		out.Nodes = append(out.Nodes, Node{
 			Name:         gn.Name,
 			Provider:     gn.Provider,
 			Deployable:   gn.Deployable,
 			Healthy:      sn.Healthy,
+			StatusSource: sn.StatusSource,
+			Detail:       sn.Detail,
+			Configured:   sn.Configured,
 			ErrorRate:    sn.ErrorRate,
 			LastDeploy:   sn.LastDeploy,
 			DailyTokens:  sn.DailyTokens,
@@ -85,6 +87,8 @@ func Build(at time.Time, g *graph.Graph, rep *stackstatus.EnvReport) *Report {
 			RecentErrors: sn.RecentErrors,
 		})
 	}
-	out.Summary = fmt.Sprintf("%d of %d nodes unhealthy", unhealthy, len(out.Nodes))
+	out.StatusReport = rep
+	c := stackstatus.CountGroups(rep)
+	out.Summary = stackstatus.FormatSummaryLine(c)
 	return out
 }

@@ -10,7 +10,7 @@ import (
 func TestStore_roundTrip(t *testing.T) {
 	home := t.TempDir()
 	p := filepath.Join(home, ".perch", "credentials")
-	s := credentials.NewStore(p)
+	s := credentials.NewStoreAt(p)
 	if err := s.Set("vercel_token", "secret"); err != nil {
 		t.Fatal(err)
 	}
@@ -26,10 +26,10 @@ func TestStore_roundTrip(t *testing.T) {
 func TestStore_persistsAcrossNewStore(t *testing.T) {
 	home := t.TempDir()
 	p := filepath.Join(home, ".perch", "credentials")
-	if err := credentials.NewStore(p).Set("k", "v"); err != nil {
+	if err := credentials.NewStoreAt(p).Set("k", "v"); err != nil {
 		t.Fatal(err)
 	}
-	v, ok, err := credentials.NewStore(p).Get("k")
+	v, ok, err := credentials.NewStoreAt(p).Get("k")
 	if err != nil || !ok || v != "v" {
 		t.Fatalf("%q ok=%v err=%v", v, ok, err)
 	}

@@ -1,4 +1,4 @@
-# Docs: https://docs.anthropic.com/en/api/models-list
+# Docs: https://platform.claude.com/docs/en/api/versioning — anthropic-version is the API contract date (not a deprecated SDK pin)
 name: anthropic
 category: ai
 deployable: false
@@ -9,7 +9,12 @@ api:
   auth_header: "x-api-key: {token}"
   endpoints:
     status: "GET /models"
+  status_headers:
+    # Required on every request; 2023-06-01 is still the current stable version per Anthropic versioning docs.
+    anthropic-version: "2023-06-01"
 
 credentials:
   key: anthropic_api_key
-  prompt: "Anthropic API key (console.anthropic.com); some calls also require anthropic-version header at runtime"
+  prompt: "Anthropic API key (platform.claude.com); requires anthropic-version header on API calls"
+  env_aliases:
+    - ANTHROPIC_API_KEY

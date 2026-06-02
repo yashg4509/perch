@@ -13,7 +13,16 @@ api:
   auth_header: "Authorization: Bearer {token}"
   endpoints:
     status: "GET /v1/status"
+  # status_probe: rest | signed | none (default rest)
+  # status_headers:
+  #   Example-Version: "2024-01-01"
 
 credentials:
   key: example_token
   prompt: "Example API token"
+  env_aliases:
+    - EXAMPLE_API_KEY
+
+# Optional: .env vars that populate perch.yaml project/service (also used at runtime for status).
+project_env_aliases:
+  - EXAMPLE_PROJECT_ID

@@ -13,11 +13,13 @@ import (
 )
 
 func newStatusCmd() *cobra.Command {
-	return &cobra.Command{
+	cmd := &cobra.Command{
 		Use:   "status",
 		Short: "Show health for all nodes in the selected environment",
 		RunE:  runStatus,
 	}
+	cmd.Flags().Bool("no-probe", false, "Skip parallel live vendor API checks")
+	return cmd
 }
 
 func runStatus(cmd *cobra.Command, args []string) error {
@@ -58,7 +60,9 @@ func runStatus(cmd *cobra.Command, args []string) error {
 	}
 
 	ctx := context.Background()
-	rep, err := stackstatus.Collect(ctx, cfg, env, reg)
+	noProbe, _ := cmd.Flags().GetBool("no-probe")
+	opts := stackstatus.CollectOptions{ProbeAPI: !noProbe}
+	rep, err := stackstatus.Collect(ctx, cfg, env, reg, opts)
 	if err != nil {
 		return err
 	}
@@ -71,12 +75,6 @@ func runStatus(cmd *cobra.Command, args []string) error {
 	}
 
 	_ = noColor
-	for _, n := range rep.Nodes {
-		st := "unhealthy"
-		if n.Healthy {
-			st = "healthy"
-		}
-		_, _ = fmt.Fprintf(out, "%s (%s): %s\n", n.Name, n.Provider, st)
-	}
+	_, _ = fmt.Fprint(out, stackstatus.FormatHuman(cfg.Name, env, rep))
 	return nil
 }

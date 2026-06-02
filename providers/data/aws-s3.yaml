@@ -17,6 +17,7 @@ api:
   auth_header: "Authorization: Bearer {token}"
   endpoints:
     status: "GET /"
+  status_probe: none
 
 credentials:
   key: aws_placeholder_token

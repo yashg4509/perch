@@ -1,1 +1,1 @@
-{"env":"production","nodes":[{"name":"api","provider":"openai","healthy":true},{"name":"web","provider":"vercel","healthy":false}]}
+{"env":"production","nodes":[{"name":"api","provider":"openai","healthy":false,"status_source":"unconfigured","configured":false,"detail":"missing credential (run perch auth sync-env)"},{"name":"web","provider":"vercel","healthy":false,"status_source":"placeholder","configured":true,"detail":"deployable host status API not implemented yet"}]}

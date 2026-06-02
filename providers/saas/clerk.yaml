@@ -12,3 +12,5 @@ api:
 credentials:
   key: clerk_secret_key
   prompt: "Clerk secret key (dashboard.clerk.com → API Keys)"
+  env_aliases:
+    - CLERK_SECRET_KEY

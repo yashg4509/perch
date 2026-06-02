@@ -12,3 +12,5 @@ api:
 credentials:
   key: resend_api_key
   prompt: "Resend API key (resend.com/api-keys)"
+  env_aliases:
+    - RESEND_API_KEY

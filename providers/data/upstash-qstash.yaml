@@ -13,3 +13,5 @@ api:
 credentials:
   key: qstash_token
   prompt: "QStash token (console.upstash.com → QStash → Signing Keys)"
+  env_aliases:
+    - QSTASH_TOKEN

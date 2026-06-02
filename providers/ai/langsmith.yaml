@@ -13,3 +13,9 @@ api:
 credentials:
   key: langsmith_api_key
   prompt: "LangSmith API key (smith.langchain.com → Settings → API Keys)"
+  env_aliases:
+    - LANGCHAIN_API_KEY
+
+project_env_aliases:
+  - LANGCHAIN_PROJECT
+  - LANGSMITH_PROJECT
