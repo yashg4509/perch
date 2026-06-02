@@ -3,6 +3,34 @@
  * Field names match Go jsonreport / stackstatus JSON tags.
  */
 
+/** @type {Record<string, string>} */
+const PROVIDER_CREDENTIAL_KEYS = {
+  vercel: 'vercel_token',
+  render: 'render_api_key',
+  supabase: 'supabase_access_token',
+}
+
+/**
+ * @param {object | undefined} graphNode
+ * @returns {string}
+ */
+export function credentialKeyForNode(graphNode) {
+  const fromGraph = String(graphNode?.credentialsKey ?? '').trim()
+  if (fromGraph !== '') {
+    return fromGraph
+  }
+  const provider = (graphNode?.provider ?? '').toLowerCase()
+  return PROVIDER_CREDENTIAL_KEYS[provider] ?? ''
+}
+
+/**
+ * @param {object | undefined} graphNode
+ * @returns {string}
+ */
+export function credentialDashboardURLForNode(graphNode) {
+  return String(graphNode?.credentialsDashboardUrl ?? '').trim()
+}
+
 /**
  * @param {string} provider
  * @returns {string[]}
@@ -141,6 +169,8 @@ export function mapGraphToNodes(graphJson, statusJson) {
       statusCommand: gn.status != null ? String(gn.status) : '',
       recentErrors: Array.isArray(st?.recent_errors) ? st.recent_errors : [],
       tabs: tabsForProvider(provider),
+      credentialsKey: credentialKeyForNode(gn),
+      credentialsDashboardUrl: credentialDashboardURLForNode(gn),
     }
   })
 }

@@ -2,8 +2,10 @@ package graph
 
 import (
 	"sort"
+	"strings"
 
 	"github.com/yashg4509/perch/internal/config"
+	"github.com/yashg4509/perch/internal/provider"
 )
 
 // JSONReport is the `perch graph --json` payload (topology; health reserved for later).
@@ -18,14 +20,16 @@ type JSONReport struct {
 
 // JSONNode is one vertex in [JSONReport.Nodes].
 type JSONNode struct {
-	Name       string `json:"name"`
-	Provider   string `json:"provider"`
-	Deployable bool   `json:"deployable"`
-	Configured bool   `json:"configured"`
-	Project    string `json:"project,omitempty"`
-	Service    string `json:"service,omitempty"`
-	Status     string `json:"status,omitempty"`
-	Logs       string `json:"logs,omitempty"`
+	Name                    string `json:"name"`
+	Provider                string `json:"provider"`
+	Deployable              bool   `json:"deployable"`
+	Configured              bool   `json:"configured"`
+	Project                 string `json:"project,omitempty"`
+	Service                 string `json:"service,omitempty"`
+	Status                  string `json:"status,omitempty"`
+	Logs                    string `json:"logs,omitempty"`
+	CredentialsKey          string `json:"credentialsKey,omitempty"`
+	CredentialsDashboardURL string `json:"credentialsDashboardUrl,omitempty"`
 }
 
 // JSONEdge is a directed dependency.
@@ -41,7 +45,8 @@ type JSONNodeHealth struct {
 }
 
 // NewJSONReport builds a stable, JSON-serializable view of g.
-func NewJSONReport(g *Graph) *JSONReport {
+// When reg is non-nil, deployable provider nodes include credentials metadata for the viz UI.
+func NewJSONReport(g *Graph, reg *provider.Registry) *JSONReport {
 	if g == nil {
 		return &JSONReport{}
 	}
@@ -65,7 +70,7 @@ func NewJSONReport(g *Graph) *JSONReport {
 		if config.IsPlaceholder(svc) {
 			svc = ""
 		}
-		nodes[i] = JSONNode{
+		jn := JSONNode{
 			Name:       n.Name,
 			Provider:   n.Provider,
 			Deployable: n.Deployable,
@@ -75,6 +80,13 @@ func NewJSONReport(g *Graph) *JSONReport {
 			Status:     n.Status,
 			Logs:       n.Logs,
 		}
+		if reg != nil {
+			if spec := reg.ByName[n.Provider]; spec != nil {
+				jn.CredentialsKey = strings.TrimSpace(spec.Credentials.Key)
+				jn.CredentialsDashboardURL = strings.TrimSpace(spec.Credentials.DashboardURL)
+			}
+		}
+		nodes[i] = jn
 	}
 	edges := make([]JSONEdge, len(g.Edges))
 	for i, e := range g.Edges {

@@ -7,7 +7,7 @@ import (
 	"github.com/yashg4509/perch/internal/provider"
 )
 
-func TestBuildSetupHint_dashboardAndEnvVar(t *testing.T) {
+func TestBuildSetupHint_dashboardURL(t *testing.T) {
 	spec := &provider.Spec{
 		Credentials: provider.CredentialsSpec{
 			Prompt:       "fallback prompt",
@@ -19,8 +19,8 @@ func TestBuildSetupHint_dashboardAndEnvVar(t *testing.T) {
 	if !strings.Contains(got, "Get token from here: https://vercel.com/account/tokens") {
 		t.Fatalf("missing dashboard url: %q", got)
 	}
-	if !strings.Contains(got, "export VERCEL_TOKEN=your_token_here") {
-		t.Fatalf("missing env var hint: %q", got)
+	if strings.Contains(got, "export ") {
+		t.Fatalf("should not include shell export hint: %q", got)
 	}
 }
 

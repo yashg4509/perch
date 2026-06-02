@@ -6,6 +6,10 @@ deployable: true
 
 cli:
   binary: supabase
+  install:
+    brew: "brew install supabase/tap/supabase"
+    npm: "npm install -g supabase"
+  auth_cmd: "supabase login"
   commands:
     logs: "supabase functions logs --project-ref {project}"
     status: "supabase projects list --output json"
@@ -22,3 +26,5 @@ api:
 credentials:
   key: supabase_access_token
   prompt: "Supabase personal access token (supabase.com/dashboard/account/tokens)"
+  dashboard_url: "https://supabase.com/dashboard/account/tokens"
+  env_var: "SUPABASE_ACCESS_TOKEN"

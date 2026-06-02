@@ -20,6 +20,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/yashg4509/perch/internal/config"
+	"github.com/yashg4509/perch/internal/credentials"
 	"github.com/yashg4509/perch/internal/customlogs"
 	"github.com/yashg4509/perch/internal/graph"
 	"github.com/yashg4509/perch/internal/provider"
@@ -94,6 +95,13 @@ func runViz(cmd *cobra.Command, args []string) error {
 			return
 		}
 		serveLogsJSON(w, r, defaultEnv)
+	})
+	mux.HandleFunc("/api/credentials", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
+			return
+		}
+		serveCredentialsPost(w, r)
 	})
 	mux.Handle("/", spaHandler(uiFS))
 
@@ -177,8 +185,60 @@ func serveGraphJSON(w http.ResponseWriter, r *http.Request, defaultEnv string) {
 		writeJSONError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	rep := graph.NewJSONReport(g)
+	rep := graph.NewJSONReport(g, reg)
 	writeJSON(w, http.StatusOK, rep)
+}
+
+type credentialsPostRequest struct {
+	Key   string `json:"key"`
+	Token string `json:"token"`
+}
+
+// serveCredentialsPost saves a provider API token to ~/.perch/credentials.
+// Plain HTTP is acceptable: perch viz listens only on 127.0.0.1, so this endpoint
+// is not reachable from other machines on the network.
+func serveCredentialsPost(w http.ResponseWriter, r *http.Request) {
+	const maxBody = 16 << 10
+	var req credentialsPostRequest
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, maxBody)).Decode(&req); err != nil {
+		writeJSONError(w, http.StatusBadRequest, "invalid JSON body")
+		return
+	}
+	key := strings.TrimSpace(req.Key)
+	token := strings.TrimSpace(req.Token)
+	if key == "" || token == "" {
+		writeJSONError(w, http.StatusBadRequest, "key and token are required")
+		return
+	}
+
+	_, reg, err := loadStackFromWD()
+	if err != nil {
+		writeJSONError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !credentialKeyKnown(reg, key) {
+		writeJSONError(w, http.StatusBadRequest, fmt.Sprintf("unknown credentials key %q", key))
+		return
+	}
+
+	store := credentials.NewStore()
+	if err := store.Set(key, token); err != nil {
+		writeJSONError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
+}
+
+func credentialKeyKnown(reg *provider.Registry, key string) bool {
+	if reg == nil || strings.TrimSpace(key) == "" {
+		return false
+	}
+	for _, spec := range reg.ByName {
+		if spec != nil && strings.TrimSpace(spec.Credentials.Key) == key {
+			return true
+		}
+	}
+	return false
 }
 
 func serveStatusJSON(w http.ResponseWriter, r *http.Request, defaultEnv string) {
