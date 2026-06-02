@@ -3,7 +3,22 @@ package stacklogs
 import (
 	"encoding/json"
 	"strings"
+
+	"github.com/yashg4509/perch/internal/provider"
 )
+
+// AuthFileToken returns a token from the provider CLI auth file when supported.
+func AuthFileToken(spec *provider.Spec) (string, bool) {
+	if spec == nil {
+		return "", false
+	}
+	switch spec.Name {
+	case "vercel":
+		return readVercelAuthToken()
+	default:
+		return "", false
+	}
+}
 
 func readVercelAuthToken() (string, bool) {
 	path := vercelAuthFilePath()

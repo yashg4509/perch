@@ -44,12 +44,12 @@ func autoSetup(ctx context.Context, spec *provider.Spec) (bool, string) {
 		return false, "auth_failed"
 	}
 
-	persistAutoSetupToken(spec)
+	PersistAutoSetupToken(spec)
 	return true, "success"
 }
 
-// persistAutoSetupToken saves a token from the provider auth file or env var into the credential store.
-func persistAutoSetupToken(spec *provider.Spec) {
+// PersistAutoSetupToken saves a token from the provider auth file or env var into the credential store.
+func PersistAutoSetupToken(spec *provider.Spec) {
 	if spec == nil {
 		return
 	}
@@ -57,7 +57,7 @@ func persistAutoSetupToken(spec *provider.Spec) {
 	if key == "" {
 		return
 	}
-	tok, ok := readAuthFileToken(spec)
+	tok, ok := AuthFileToken(spec)
 	if !ok || tok == "" {
 		if ev := strings.TrimSpace(spec.Credentials.EnvVar); ev != "" {
 			tok = strings.TrimSpace(platformHooks.getenv(ev))
@@ -84,18 +84,6 @@ func installCommand(spec *provider.Spec) (cmd, pkgManager string) {
 		return c, pm
 	}
 	return "", ""
-}
-
-func readAuthFileToken(spec *provider.Spec) (string, bool) {
-	if spec == nil {
-		return "", false
-	}
-	switch spec.Name {
-	case "vercel":
-		return readVercelAuthToken()
-	default:
-		return "", false
-	}
 }
 
 var setupHooks = struct {
