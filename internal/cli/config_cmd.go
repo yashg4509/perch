@@ -5,11 +5,30 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/spf13/cobra"
 	"github.com/yashg4509/perch/internal/config"
 	"github.com/yashg4509/perch/internal/credentials"
 )
+
+func resolvePerchConfigPath(wd, flagPath string) (string, error) {
+	if flagPath == "" {
+		return config.FindPerchYAML(wd)
+	}
+	abs, err := filepath.Abs(flagPath)
+	if err != nil {
+		return "", err
+	}
+	if filepath.Base(abs) != "perch.yaml" {
+		return "", fmt.Errorf("config path must be named perch.yaml")
+	}
+	rel, err := filepath.Rel(wd, abs)
+	if err != nil || strings.HasPrefix(rel, "..") {
+		return "", fmt.Errorf("config path must be under current working directory")
+	}
+	return abs, nil
+}
 
 func newConfigCmd() *cobra.Command {
 	cmd := &cobra.Command{
@@ -42,11 +61,9 @@ local dev. Does not modify ~/.perch/credentials — use perch auth sync-env for 
 			if err != nil {
 				return err
 			}
-			if perchPath == "" {
-				perchPath, err = config.FindPerchYAML(wd)
-				if err != nil {
-					return err
-				}
+			perchPath, err = resolvePerchConfigPath(wd, perchPath)
+			if err != nil {
+				return err
 			}
 			root := filepath.Dir(perchPath)
 			if envMapFile == "" {
@@ -92,6 +109,7 @@ local dev. Does not modify ~/.perch/credentials — use perch auth sync-env for 
 			if err != nil {
 				return err
 			}
+			// #nosec G306 G703 — perch.yaml is non-secret metadata; path validated above.
 			if err := os.WriteFile(perchPath, out, 0o644); err != nil {
 				return err
 			}
