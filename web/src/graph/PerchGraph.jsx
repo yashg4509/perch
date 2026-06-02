@@ -80,12 +80,16 @@ export function PerchGraph({ selectedNodeId, nodes: nodesProp, edges: edgesProp,
     setNodes(
       src.map((n) => ({
         ...n,
+        data: {
+          ...n.data,
+          environment: layoutResetKey,
+        },
         position: userPositionsRef.current[n.id] ?? n.position,
         selected: n.id === selectedNodeId,
       })),
     )
     setEdges(edgesProp ?? defaultFlow.edges)
-  }, [nodesProp, edgesProp, defaultFlow.nodes, defaultFlow.edges, selectedNodeId, setNodes, setEdges])
+  }, [nodesProp, edgesProp, defaultFlow.nodes, defaultFlow.edges, selectedNodeId, layoutResetKey, setNodes, setEdges])
 
   const onNodeDragStop = useCallback(() => {
     setNodes((nds) => {
