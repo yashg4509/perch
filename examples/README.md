@@ -31,6 +31,7 @@ This directory holds **copy-paste-friendly sample projects** so you can exercise
 | [`scenarios/init-signals`](scenarios/init-signals) | **Detection only** — run `perch init` here to regenerate `perch.yaml` from `vercel.json` + `package.json`. |
 | [`scenarios/full-stack`](scenarios/full-stack) | **Committed `perch.yaml`** — run `status`, `graph`, `context`, and the TUI without running `init` first. Optional local health server for `custom` dev commands. |
 | [`scenarios/manual-cli-test`](scenarios/manual-cli-test) | **Two local health servers** — best default for exercising `dev` custom nodes, `graph`/`status`/`context`, and the TUI together (see scenario README). |
+| [`scenarios/full-platform`](scenarios/full-platform) | **Perch Brief** — 5‑min app + Perch CLI demo; one guide: [`README.md`](scenarios/full-platform/README.md). |
 | [`scenarios/_template`](scenarios/_template) | Checklist for **adding** a new scenario. |
 
 ## Quick commands (after `cd` into a scenario)
