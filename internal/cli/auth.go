@@ -62,7 +62,7 @@ write back to .env. Existing credential keys are skipped unless --overwrite.`,
 					return err
 				}
 			}
-			store := credentials.NewStore(path)
+			store := credentials.NewStoreAt(path)
 
 			res, err := credentials.ImportEnvFile(store, envFile, specs, credentials.ImportOptions{
 				Overwrite: overwrite,

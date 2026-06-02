@@ -16,7 +16,7 @@ func TestImportEnvFile_importsAndSkipsExisting(t *testing.T) {
 		t.Fatal(err)
 	}
 	credPath := filepath.Join(dir, ".perch", "credentials")
-	store := credentials.NewStore(credPath)
+	store := credentials.NewStoreAt(credPath)
 	if err := store.Set("clerk_secret_key", "existing"); err != nil {
 		t.Fatal(err)
 	}
@@ -51,7 +51,7 @@ func TestImportEnvFile_overwrite(t *testing.T) {
 	if err := os.WriteFile(envPath, []byte("OPENAI_API_KEY=new\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	store := credentials.NewStore(filepath.Join(dir, ".perch", "credentials"))
+	store := credentials.NewStoreAt(filepath.Join(dir, ".perch", "credentials"))
 	_ = store.Set("openai_api_key", "old")
 
 	specs := []provider.CredentialsSpec{{Key: "openai_api_key", EnvAliases: []string{"OPENAI_API_KEY"}}}
@@ -74,7 +74,7 @@ func TestImportEnvFile_dryRun(t *testing.T) {
 	if err := os.WriteFile(envPath, []byte("OPENAI_API_KEY=sk\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	store := credentials.NewStore(filepath.Join(dir, ".perch", "credentials"))
+	store := credentials.NewStoreAt(filepath.Join(dir, ".perch", "credentials"))
 	specs := []provider.CredentialsSpec{{Key: "openai_api_key", EnvAliases: []string{"OPENAI_API_KEY"}}}
 	res, err := credentials.ImportEnvFile(store, envPath, specs, credentials.ImportOptions{DryRun: true})
 	if err != nil {

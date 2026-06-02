@@ -15,7 +15,7 @@ func loadCredStore() (*credentials.Store, error) {
 	if err != nil {
 		return nil, err
 	}
-	return credentials.NewStore(p), nil
+	return credentials.NewStoreAt(p), nil
 }
 
 func credentialSpecsForEnv(cfg *config.Config, env string, reg *provider.Registry) []provider.CredentialsSpec {

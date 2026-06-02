@@ -38,7 +38,7 @@ environments:
 		t.Fatal("expected unconfigured without env and credentials")
 	}
 	credPath := filepath.Join(t.TempDir(), "credentials.json")
-	store := credentials.NewStore(credPath)
+	store := credentials.NewStoreAt(credPath)
 	if err := store.Set("pinecone_api_key", "test-key"); err != nil {
 		t.Fatal(err)
 	}

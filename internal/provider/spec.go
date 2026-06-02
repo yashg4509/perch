@@ -9,15 +9,15 @@ import (
 
 // Spec is the typed provider definition loaded from providers/**/*.yaml.
 type Spec struct {
-	Name                string          `yaml:"name"`
-	Category            string          `yaml:"category"`
-	Deployable          bool            `yaml:"deployable"`
-	LLM                 bool            `yaml:"llm"`
-	CLI                 *CLISpec        `yaml:"cli"`
-	API                 APISpec         `yaml:"api"`
-	Credentials         CredentialsSpec `yaml:"credentials"`
-	ProjectEnvAliases   []string        `yaml:"project_env_aliases,omitempty"`
-	ServiceEnvAliases   []string        `yaml:"service_env_aliases,omitempty"`
+	Name              string          `yaml:"name"`
+	Category          string          `yaml:"category"`
+	Deployable        bool            `yaml:"deployable"`
+	LLM               bool            `yaml:"llm"`
+	CLI               *CLISpec        `yaml:"cli"`
+	API               APISpec         `yaml:"api"`
+	Credentials       CredentialsSpec `yaml:"credentials"`
+	ProjectEnvAliases []string        `yaml:"project_env_aliases,omitempty"`
+	ServiceEnvAliases []string        `yaml:"service_env_aliases,omitempty"`
 }
 
 // CLISpec is the CLI section (required when Deployable is true).
@@ -30,11 +30,11 @@ type CLISpec struct {
 
 // APISpec is the REST section (always required).
 type APISpec struct {
-	BaseURL        string            `yaml:"base_url"`
-	AuthHeader     string            `yaml:"auth_header"`
-	Endpoints      map[string]string `yaml:"endpoints"`
-	StatusProbe    string            `yaml:"status_probe,omitempty"`    // rest (default), signed, none
-	StatusHeaders  map[string]string `yaml:"status_headers,omitempty"`  // extra headers for status GET
+	BaseURL       string            `yaml:"base_url"`
+	AuthHeader    string            `yaml:"auth_header"`
+	Endpoints     map[string]string `yaml:"endpoints"`
+	StatusProbe   string            `yaml:"status_probe,omitempty"`   // rest (default), signed, none
+	StatusHeaders map[string]string `yaml:"status_headers,omitempty"` // extra headers for status GET
 }
 
 // StatusProbeMode returns rest, signed, or none.

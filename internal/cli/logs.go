@@ -41,7 +41,7 @@ func runLogsSetup(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	cfg, reg, err := loadStackFromWD()
+	cfg, reg, _, err := loadStackFromWD()
 	if err != nil {
 		return err
 	}

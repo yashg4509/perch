@@ -211,7 +211,7 @@ func serveCredentialsPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, reg, err := loadStackFromWD()
+	_, reg, _, err := loadStackFromWD()
 	if err != nil {
 		writeJSONError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -281,7 +281,7 @@ func serveLogsJSON(w http.ResponseWriter, r *http.Request, defaultEnv string) {
 		return
 	}
 
-	cfg, reg, err := loadStackFromWD()
+	cfg, reg, _, err := loadStackFromWD()
 	if err != nil {
 		writeJSONError(w, http.StatusInternalServerError, err.Error())
 		return
