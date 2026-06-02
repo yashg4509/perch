@@ -1,5 +1,7 @@
 import { Handle, Position } from '@xyflow/react'
+import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { buildErrorPrompt, isErroredNode, openInAIWithFallback } from '../lib/aiHandoff.js'
 import { ProviderBadge } from './ProviderBadge.jsx'
 import { StatusPill } from './StatusPill.jsx'
 
@@ -31,6 +33,19 @@ export function ServiceCard({ data, selected }) {
   }
 
   const ring = selected ? 'border-gray-400 ring-2 ring-gray-200' : 'border-gray-200'
+  const showAIActions = isErroredNode(data)
+  const [openInMenuOpen, setOpenInMenuOpen] = useState(false)
+
+  const openAI = async (tool, event) => {
+    event.stopPropagation()
+    const prompt = buildErrorPrompt({ node: data, environment: data?.environment })
+    try {
+      await openInAIWithFallback({ tool, prompt })
+    } catch {
+      // silent; DetailPanel has richer fallback messaging
+    }
+    setOpenInMenuOpen(false)
+  }
 
   return (
     <div className="relative w-[210px] max-w-[210px]">
@@ -97,6 +112,46 @@ export function ServiceCard({ data, selected }) {
             </button>
           ))}
         </div>
+        {showAIActions && (
+          <div className="relative border-t border-gray-200 p-1.5">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                setOpenInMenuOpen((v) => !v)
+              }}
+              className="w-full rounded border border-gray-200 px-1.5 py-1.5 text-[11px] text-gray-700 hover:bg-gray-50 hover:text-gray-900"
+              title="Open in"
+            >
+              Open in
+            </button>
+            {openInMenuOpen && (
+              <div className="absolute left-1.5 right-1.5 z-20 mt-1 rounded-md border border-gray-200 bg-white p-1 shadow-lg">
+                <button
+                  type="button"
+                  onClick={(e) => void openAI('codex', e)}
+                  className="block w-full rounded px-2 py-1.5 text-left text-[11px] text-gray-800 hover:bg-gray-50"
+                >
+                  Codex
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => void openAI('cursor', e)}
+                  className="block w-full rounded px-2 py-1.5 text-left text-[11px] text-gray-800 hover:bg-gray-50"
+                >
+                  Cursor
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => void openAI('claude', e)}
+                  className="block w-full rounded px-2 py-1.5 text-left text-[11px] text-gray-800 hover:bg-gray-50"
+                >
+                  Claude Code
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   )
