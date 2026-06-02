@@ -2,6 +2,187 @@
 
 Perch is a Go CLI plus an embedded React UI that reads a project `perch.yaml`, loads embedded provider specs, builds a dependency graph, probes live health where credentials allow, and resolves provider logs through a ordered credential strategy chain. The `integrate/platform-and-logs` branch wires `perch viz` as a localhost-only API server (`/api/graph`, `/api/status`, `/api/logs`, `/api/credentials`) so the web stack view stays in sync with the same code paths as `perch status` and `perch logs setup`.
 
+Use **§0** to decide *what the product should be*; use **§1–§4** to see *how this branch implements it*.
+
+---
+
+## 0. Product requirements (PRD)
+
+This section is a working-backwards map: product intent on top, implementation status below. Status reflects **`integrate/platform-and-logs`** (not the full design spec in `.cursor/plans/spec.md`).
+
+### Vision
+
+**One binary** that gives developers and coding agents a unified view of a multi-service stack (Vercel + Render + Supabase + Stripe + Clerk + …) without tab-switching across vendor dashboards.
+
+| Audience | Job to be done | Primary surface today |
+|----------|----------------|------------------------|
+| Human developer | See what is up/down, open logs, correlate failures | **Web viz** (`perch viz`) + CLI |
+| Human developer (power user) | Keyboard-driven exploration in the terminal | **Bubbletea TUI** (graph + status; logs/env/deploy stubbed) |
+| Coding agent | Inject stack topology + health into a prompt | **`perch context`**, **`perch graph --json`**, **`perch status --json`** |
+
+**Non-goals (this build):** Perch cloud, hosted dashboard, multi-user auth, provider marketplace, MCP server.
+
+### Product principles
+
+1. **No secrets in git** — `perch.yaml` is committed; tokens live in `~/.perch/credentials` (and optionally project `.env` for import only).
+2. **Providers are data** — ~35 bundled YAML files under `providers/`; adding a vendor should not require Go changes for basic GET/status flows.
+3. **Same truth everywhere** — Graph, status, and logs share `internal/graph`, `stackstatus`, and `stacklogs`; viz HTTP handlers call the same collectors as CLI.
+4. **Local-first** — `perch viz` binds `127.0.0.1`; credential POST from the browser is acceptable only on loopback.
+5. **Agent-safe output** — `perch context` must not emit raw env values or tokens (partially true today; deploy/error richness still thin).
+
+### Domain model
+
+| Concept | Meaning | Example |
+|---------|---------|---------|
+| **Stack** | Named app + environments + edges | `name: my-app` in `perch.yaml` |
+| **Environment** | Named slice of the same logical nodes | `production`, `staging`, `dev` |
+| **Node** | One service in one environment | `frontend: { provider: vercel, project: my-app }` |
+| **Deployable node** | Host you deploy code to; solid border in UI | Vercel, Render, Railway |
+| **Read-only node** | Third-party API; dashed border | Stripe, OpenAI, Clerk |
+| **Custom node** | Shell `status:` / `logs:` for local dev | `curl localhost:3000/health` |
+| **Edge** | Directed dependency | `frontend -> backend -> db` |
+| **Provider** | Integration spec (CLI + REST + credential metadata) | `providers/hosting/vercel.yaml` |
+
+### Feature inventory (what exists vs roadmap)
+
+Legend: **Shipped** = usable end-to-end on this branch · **Partial** = works with known gaps · **Planned** = in spec, not implemented · **Stub** = UI/CLI present but no real behavior
+
+#### A. Stack configuration & discovery
+
+| Feature | Description | Status | How users touch it |
+|---------|-------------|--------|-------------------|
+| `perch.yaml` config | Committed stack definition (nodes, edges, envs) | **Shipped** | Edit file; `perch init` scaffolds |
+| `perch init` | Detect providers from config files + `package.json` | **Partial** | No resource picker, reauth, or `perch link` |
+| `perch edge` | Add/remove edges in YAML | **Shipped** | CLI |
+| Multi-repo / `perch link` | Merge stacks across repos | **Planned** | — |
+| Dev port scan (`init --env dev`) | Auto custom nodes from open ports | **Planned** | — |
+
+#### B. Credentials & onboarding
+
+| Feature | Description | Status | How users touch it |
+|---------|-------------|--------|-------------------|
+| Credential store | `~/.perch/credentials` JSON file | **Shipped** | All auth flows |
+| `perch auth sync-env` | Import `.env` → store via `env_aliases` | **Shipped** | CLI |
+| `perch config sync-env` | Backfill `perch.yaml` project/service from `.env` | **Shipped** | CLI |
+| `perch logs setup` | Install provider CLI + interactive login | **Shipped** | CLI (foreground; before `perch viz`) |
+| In-UI token connect | Paste API token when logs auth fails | **Shipped** | DetailPanel → Connect → `POST /api/credentials` |
+| `perch provider reauth` | Re-prompt on 401 | **Planned** | — |
+
+#### C. Topology & health
+
+| Feature | Description | Status | How users touch it |
+|---------|-------------|--------|-------------------|
+| `perch graph` | Stack topology JSON/text | **Shipped** | CLI; `/api/graph` |
+| `perch status` | Per-node health report | **Partial** | CLI; `/api/status` |
+| SaaS API probes | Live HTTP check for read-only nodes with creds | **Shipped** | Anthropic, Clerk, Pusher, etc. |
+| Deployable host status | Vercel/Render/Supabase deployment health | **Stub** | Placeholder “unhealthy” until stack/08 |
+| Custom shell status | Run `status:` command | **Shipped** | Dev/custom nodes |
+| `perch incidents` | Vendor status pages | **Planned** | — |
+| Status polling in viz | Auto-refresh health every 10s | **Shipped** | `usePerchData` |
+
+#### D. Logs
+
+| Feature | Description | Status | How users touch it |
+|---------|-------------|--------|-------------------|
+| Provider log fetch | Multi-strategy auth → vendor API | **Partial** | Vercel, Render, Supabase only |
+| Custom node logs | Shell `logs:` command | **Shipped** | `/api/logs`; copy-paste in UI for custom |
+| Logs in web viz | Tab on node detail | **Shipped** | DetailPanel; manual refresh |
+| `perch logs --node` stream | CLI tail / follow | **Planned** | — |
+| TUI log panel (`l`) | In-terminal tail | **Stub** | Hint only in TUI |
+| Cross-node trace / waterfall | `perch trace` | **Planned** | — |
+
+#### E. Deployments & env (spec-heavy)
+
+| Feature | Description | Status | How users touch it |
+|---------|-------------|--------|-------------------|
+| Deployments tab in viz | Last deploy, errors from status meta | **Partial** | Empty for deployable until status API |
+| `perch deploy` / `rollback` | Trigger vendor deploy | **Planned** | — |
+| Env vars list/set/diff | `perch env *` | **Planned** | Env tab removed from web UI |
+| Snapshots / atomic rollback | Save SHA set, roll back stack | **Planned** | — |
+| GitHub integration | Commit lag, blame, PR previews | **Planned** | Optional `github.repo` in YAML unused |
+
+#### F. Surfaces
+
+| Surface | Purpose | Status | Entry |
+|---------|---------|--------|-------|
+| **CLI** | Scriptable commands, CI, agents | **Partial** | `perch` subcommands |
+| **TUI** | Default when running bare `perch` | **Partial** | Graph + status refresh; panels stubbed |
+| **Web viz** | Visual graph + node detail | **Shipped** | `perch viz` → browser |
+| **Agent JSON** | Machine-readable stack state | **Partial** | `--json`, `context --for-agent` |
+
+#### G. Provider platform
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| Bundled provider YAML | Hosting, data, SaaS, AI, observability, workflows | **Shipped** (~35) |
+| YAML validation | `make provider-validate` | **Shipped** |
+| Community provider registry | `perch provider add/search` | **Planned** |
+| LLM usage/cost commands | `perch llm *` | **Planned** |
+
+### User journeys (happy paths on this branch)
+
+```mermaid
+flowchart LR
+  subgraph onboard [Onboard]
+    Init["perch init\nor hand-write perch.yaml"]
+    Auth["perch auth sync-env\n+ perch logs setup"]
+  end
+
+  subgraph observe [Observe]
+    Viz["perch viz"]
+    Graph["Graph + status pills"]
+    Detail["Node detail panel"]
+  end
+
+  subgraph debug [Debug]
+    Logs["Logs tab\n/api/logs"]
+    Connect["Connect token\nif needed"]
+    Context["perch context --for-agent"]
+  end
+
+  Init --> Auth --> Viz --> Graph --> Detail --> Logs
+  Logs --> Connect --> Logs
+  Detail --> Context
+```
+
+1. **New project** — Run `perch init` (or copy an example `perch.yaml`) → add `.env` → `perch auth sync-env`.
+2. **Daily dev** — `perch viz` from repo root → pick environment → click unhealthy node → read status errors → open logs tab.
+3. **Logs blocked** — Run `perch logs setup` in a real terminal **or** paste token in Connect UI → refresh logs.
+4. **Agent handoff** — `perch context --for-agent` + graph JSON for topology; note deployable health may be placeholder.
+
+### Example scenarios in repo
+
+| Path | Role |
+|------|------|
+| `examples/scenarios/full-stack` | Smoke tests; custom dev nodes + Vercel |
+| `examples/scenarios/full-platform` | “Perch Brief” benchmark; many providers |
+| `examples/scenarios/init-signals` | Init/detection fixture |
+| `examples/scenarios/manual-cli-test` | CLI manual checks |
+
+### Success criteria (this milestone)
+
+What “done” means for **`integrate/platform-and-logs`** before merging to `main`:
+
+- [ ] `./scripts/smoke-stack.sh` passes locally and in CI
+- [ ] SaaS nodes with valid creds show **UP** in `perch status` and viz
+- [ ] Logs work for at least one deployable + one read-only path after auth
+- [ ] No secrets in repo; credentials only in store / local `.env`
+- [ ] Stacked PRs #14–#18 merge bottom-up without regressions
+
+### Roadmap (work backwards from here)
+
+Recommended next product increments (see also `docs/DEBT_INVENTORY.md`):
+
+| Priority | Product outcome | Unblocks |
+|----------|-----------------|----------|
+| 1 | Trustworthy **deployable status** + deploy metadata | Deployments tab, agent context, TUI detail |
+| 2 | **TUI logs** (`l`) reusing `stacklogs` | Spec-aligned primary surface |
+| 3 | **Env vars** CLI + web tab | `e` keybinding, config debugging |
+| 4 | **Deploy / rollback** | `d` panel, snapshots later |
+| Defer | Trace, incidents, LLM costs, marketplace | Stretch / V2 |
+
+---
+
 ## 1. System architecture
 
 ```mermaid
