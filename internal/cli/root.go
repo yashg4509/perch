@@ -23,6 +23,8 @@ func NewRootCmd() *cobra.Command {
 	pf.Bool("no-color", false, "Disable ANSI colors (human output)")
 
 	root.AddCommand(newInitCmd())
+	root.AddCommand(newAuthCmd())
+	root.AddCommand(newConfigCmd())
 	root.AddCommand(newContextCmd())
 	root.AddCommand(newStatusCmd())
 	root.AddCommand(newGraphCmd())

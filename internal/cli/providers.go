@@ -10,6 +10,15 @@ import (
 	rootproviders "github.com/yashg4509/perch/providers"
 )
 
+// loadProviderRegistry loads provider YAML for the current working directory.
+func loadProviderRegistry() (*provider.Registry, error) {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return nil, err
+	}
+	return loadRegistryForProject(cwd)
+}
+
 // loadRegistryForProject loads YAML from PERCH_PROVIDERS_DIR, else providers/ under projectRoot
 // when it contains non-underscore *.yaml (any depth), else the bundled definitions shipped with the binary.
 func loadRegistryForProject(projectRoot string) (*provider.Registry, error) {

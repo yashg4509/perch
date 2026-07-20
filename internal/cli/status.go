@@ -60,8 +60,10 @@ func runStatus(cmd *cobra.Command, args []string) error {
 	}
 
 	ctx := context.Background()
-	noProbe, _ := cmd.Flags().GetBool("no-probe")
-	opts := stackstatus.CollectOptions{ProbeAPI: !noProbe}
+	opts := loadCollectOptions(perchPath)
+	if noProbe, _ := cmd.Flags().GetBool("no-probe"); noProbe {
+		opts.ProbeAPI = false
+	}
 	rep, err := stackstatus.Collect(ctx, cfg, env, reg, opts)
 	if err != nil {
 		return err
