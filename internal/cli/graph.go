@@ -60,7 +60,7 @@ func runGraph(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	rep := graph.NewJSONReport(g)
+	rep := graph.NewJSONReport(g, reg)
 
 	out := cmd.OutOrStdout()
 	if jsonOut {
