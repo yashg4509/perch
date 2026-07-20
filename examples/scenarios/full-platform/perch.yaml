@@ -1,0 +1,267 @@
+name: perch-brief
+environments:
+  dev:
+    analytics:
+      provider: posthog
+      project: local-dev
+    anthropic:
+      provider: anthropic
+      project: default
+    api:
+      provider: custom
+      status: curl -sf http://127.0.0.1:4000/health >/dev/null
+      logs: 'echo ''Run: npm run dev -w @perch-brief/api'''
+    auth:
+      provider: clerk
+      project: perch-brief
+    billing:
+      provider: stripe
+      project: local-dev
+    email:
+      provider: resend
+      project: local-dev
+    errors:
+      provider: sentry
+      project: local-dev
+    jobs:
+      provider: inngest
+      project: local-dev
+    logs:
+      provider: logtail
+      project: local-dev
+    media:
+      provider: cloudinary
+      project: local-dev
+    metrics:
+      provider: datadog
+      project: local-dev
+    openai:
+      provider: openai
+      project: default
+    postgres:
+      provider: neon
+      project: local-neon
+    queue:
+      provider: upstash-qstash
+      project: local-dev
+    realtime:
+      provider: pusher
+      project: "2159741"
+    redis:
+      provider: upstash
+      project: local-dev
+    repo:
+      provider: github
+      project: local-dev
+    traces:
+      provider: langsmith
+      project: local-dev
+    vectors:
+      provider: pinecone
+      project: perch-brief
+    web:
+      provider: custom
+      status: curl -sf http://127.0.0.1:3000/health >/dev/null
+      logs: 'echo ''Run: npm run dev -w @perch-brief/web'''
+  preview:
+    analytics:
+      provider: posthog
+      project: CHANGE_ME
+    anthropic:
+      provider: anthropic
+      project: CHANGE_ME
+    api:
+      provider: railway
+      service: YOUR_RAILWAY_SERVICE_PREVIEW
+    auth:
+      provider: clerk
+      project: CHANGE_ME
+    billing:
+      provider: stripe
+      project: CHANGE_ME
+    email:
+      provider: resend
+      project: CHANGE_ME
+    errors:
+      provider: sentry
+      project: CHANGE_ME
+    jobs:
+      provider: inngest
+      project: CHANGE_ME
+    logs:
+      provider: logtail
+      project: CHANGE_ME
+    media:
+      provider: cloudinary
+      project: CHANGE_ME_CLOUD_NAME
+    metrics:
+      provider: datadog
+      project: CHANGE_ME
+    openai:
+      provider: openai
+      project: CHANGE_ME
+    postgres:
+      provider: neon
+      project: CHANGE_ME_NEON_PROJECT_ID_PREVIEW
+    queue:
+      provider: upstash-qstash
+      project: CHANGE_ME
+    realtime:
+      provider: pusher
+      project: CHANGE_ME
+    redis:
+      provider: upstash
+      project: CHANGE_ME_DATABASE_ID_PREVIEW
+    repo:
+      provider: github
+      project: CHANGE_ME
+    traces:
+      provider: langsmith
+      project: CHANGE_ME
+    vectors:
+      provider: pinecone
+      project: CHANGE_ME_PINECONE_INDEX_PREVIEW
+    web:
+      provider: vercel
+      project: YOUR_VERCEL_PROJECT_PREVIEW
+  production:
+    analytics:
+      provider: posthog
+      project: CHANGE_ME
+    anthropic:
+      provider: anthropic
+      project: CHANGE_ME
+    api:
+      provider: railway
+      service: YOUR_RAILWAY_SERVICE
+    auth:
+      provider: clerk
+      project: CHANGE_ME
+    billing:
+      provider: stripe
+      project: CHANGE_ME
+    email:
+      provider: resend
+      project: CHANGE_ME
+    errors:
+      provider: sentry
+      project: CHANGE_ME
+    jobs:
+      provider: inngest
+      project: CHANGE_ME
+    logs:
+      provider: logtail
+      project: CHANGE_ME
+    media:
+      provider: cloudinary
+      project: CHANGE_ME_CLOUD_NAME
+    metrics:
+      provider: datadog
+      project: CHANGE_ME
+    openai:
+      provider: openai
+      project: CHANGE_ME
+    postgres:
+      provider: neon
+      project: CHANGE_ME_NEON_PROJECT_ID
+    queue:
+      provider: upstash-qstash
+      project: CHANGE_ME
+    realtime:
+      provider: pusher
+      project: CHANGE_ME
+    redis:
+      provider: upstash
+      project: CHANGE_ME_DATABASE_ID
+    repo:
+      provider: github
+      project: CHANGE_ME
+    traces:
+      provider: langsmith
+      project: CHANGE_ME
+    vectors:
+      provider: pinecone
+      project: CHANGE_ME_PINECONE_INDEX
+    web:
+      provider: vercel
+      project: YOUR_VERCEL_PROJECT
+  staging:
+    analytics:
+      provider: posthog
+      project: CHANGE_ME
+    anthropic:
+      provider: anthropic
+      project: CHANGE_ME
+    api:
+      provider: railway
+      service: YOUR_RAILWAY_SERVICE_STAGING
+    auth:
+      provider: clerk
+      project: CHANGE_ME
+    billing:
+      provider: stripe
+      project: CHANGE_ME
+    email:
+      provider: resend
+      project: CHANGE_ME
+    errors:
+      provider: sentry
+      project: CHANGE_ME
+    jobs:
+      provider: inngest
+      project: CHANGE_ME
+    logs:
+      provider: logtail
+      project: CHANGE_ME
+    media:
+      provider: cloudinary
+      project: CHANGE_ME_CLOUD_NAME
+    metrics:
+      provider: datadog
+      project: CHANGE_ME
+    openai:
+      provider: openai
+      project: CHANGE_ME
+    postgres:
+      provider: neon
+      project: CHANGE_ME_NEON_PROJECT_ID_STAGING
+    queue:
+      provider: upstash-qstash
+      project: CHANGE_ME
+    realtime:
+      provider: pusher
+      project: CHANGE_ME
+    redis:
+      provider: upstash
+      project: CHANGE_ME_DATABASE_ID_STAGING
+    repo:
+      provider: github
+      project: CHANGE_ME
+    traces:
+      provider: langsmith
+      project: CHANGE_ME
+    vectors:
+      provider: pinecone
+      project: CHANGE_ME_PINECONE_INDEX_STAGING
+    web:
+      provider: vercel
+      project: YOUR_VERCEL_PROJECT_STAGING
+edges:
+  - web -> api
+  - web -> auth
+  - web -> analytics
+  - web -> errors
+  - web -> repo
+  - api -> postgres
+  - api -> redis
+  - api -> vectors
+  - api -> openai
+  - api -> anthropic
+  - api -> traces
+  - api -> billing
+  - api -> media
+  - api -> queue
+  - api -> email
+  - api -> jobs
+  - api -> realtime
+  - jobs -> email
