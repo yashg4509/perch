@@ -16,11 +16,13 @@ type Config struct {
 
 // Node is one service definition under an environment.
 type Node struct {
-	Provider string `yaml:"provider"`
-	Project  string `yaml:"project,omitempty"`
-	Service  string `yaml:"service,omitempty"`
-	Status   string `yaml:"status,omitempty"` // shell command when provider is custom
-	Logs     string `yaml:"logs,omitempty"`   // optional log tail command for custom
+	Provider   string `yaml:"provider"`
+	Project    string `yaml:"project,omitempty"`
+	Service    string `yaml:"service,omitempty"`
+	EnvProject string `yaml:"env_project,omitempty"` // optional .env key override for project inference
+	EnvService string `yaml:"env_service,omitempty"` // optional .env key override for service inference
+	Status     string `yaml:"status,omitempty"`      // shell command when provider is custom
+	Logs       string `yaml:"logs,omitempty"`        // optional log tail command for custom
 }
 
 // Edge is a directed dependency between node names (same names as in environments.*).

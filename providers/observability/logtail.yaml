@@ -13,3 +13,5 @@ api:
 credentials:
   key: better_stack_telemetry_token
   prompt: "Better Stack Telemetry API token (betterstack.com → Sources → Telemetry API)"
+  env_aliases:
+    - LOGTAIL_SOURCE_TOKEN

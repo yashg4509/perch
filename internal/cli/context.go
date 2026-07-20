@@ -76,7 +76,7 @@ func runContext(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	rep, err := stackstatus.Collect(ctx, cfg, env, reg)
+	rep, err := stackstatus.Collect(ctx, cfg, env, reg, stackstatus.CollectOptions{})
 	if err != nil {
 		return err
 	}
@@ -103,20 +103,10 @@ func writeContextForAgent(w io.Writer, r *stackcontext.Report) error {
 	b.WriteString(r.Environment)
 	b.WriteString("\nGenerated: ")
 	b.WriteString(r.GeneratedAt)
-	b.WriteString("\n\nNodes:\n")
-	for _, n := range r.Nodes {
-		st := "healthy"
-		if !n.Healthy {
-			st = "unhealthy"
-		}
-		kind := "read-only"
-		if n.Deployable {
-			kind = "deployable"
-		}
-		_, _ = fmt.Fprintf(&b, "- %s (%s, %s): %s\n", n.Name, n.Provider, kind, st)
-	}
-	if r.Summary != "" {
-		_, _ = fmt.Fprintf(&b, "\nSummary: %s\n", r.Summary)
+	b.WriteByte('\n')
+	if r.StatusReport != nil {
+		_, _ = b.WriteString("\n")
+		_, _ = b.WriteString(stackstatus.FormatHuman(r.Stack, r.Environment, r.StatusReport))
 	}
 	_, err := w.Write([]byte(b.String()))
 	return err

@@ -12,3 +12,5 @@ api:
 credentials:
   key: stripe_secret_key
   prompt: "Stripe secret key (dashboard.stripe.com/apikeys)"
+  env_aliases:
+    - STRIPE_SECRET_KEY

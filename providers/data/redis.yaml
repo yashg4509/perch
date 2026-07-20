@@ -8,6 +8,7 @@ api:
   auth_header: "x-api-key: {token}"
   endpoints:
     status: "GET /payment-methods"
+  status_probe: none
 
 credentials:
   key: redis_cloud_account_key

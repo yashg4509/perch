@@ -178,7 +178,7 @@ func serveStatusJSON(w http.ResponseWriter, r *http.Request, defaultEnv string) 
 		return
 	}
 	ctx := context.Background()
-	rep, err := stackstatus.Collect(ctx, cfg, env, reg)
+	rep, err := stackstatus.Collect(ctx, cfg, env, reg, stackstatus.CollectOptions{})
 	if err != nil {
 		if isBadEnvErr(err) {
 			writeJSONError(w, http.StatusBadRequest, err.Error())

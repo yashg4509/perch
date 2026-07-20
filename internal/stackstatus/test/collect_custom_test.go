@@ -29,7 +29,7 @@ edges: []
 		t.Fatal(err)
 	}
 	reg := &provider.Registry{ByName: map[string]*provider.Spec{}}
-	got, err := stackstatus.Collect(ctx, cfg, "production", reg)
+	got, err := stackstatus.Collect(ctx, cfg, "production", reg, stackstatus.CollectOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}

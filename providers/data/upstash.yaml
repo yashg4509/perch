@@ -13,3 +13,5 @@ api:
 credentials:
   key: upstash_management_basic
   prompt: "Base64(email:API_KEY) for Upstash Developer API (console.upstash.com → Account → API Keys)"
+  env_aliases:
+    - UPSTASH_MANAGEMENT_BASIC

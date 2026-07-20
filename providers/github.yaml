@@ -1,3 +1,4 @@
+# Docs: https://docs.github.com/en/rest/users/users?apiVersion=2026-03-10#get-the-authenticated-user
 name: github
 category: git
 deployable: false
@@ -7,7 +8,17 @@ api:
   auth_header: "Authorization: Bearer {token}"
   endpoints:
     status: "GET /user"
+  status_headers:
+    Accept: application/vnd.github+json
+    X-GitHub-Api-Version: "2026-03-10"
 
 credentials:
   key: github_token
   prompt: "GitHub personal access token (github.com/settings/tokens)"
+  env_aliases:
+    - GITHUB_TOKEN
+    - GH_TOKEN
+
+project_env_aliases:
+  - GITHUB_REPOSITORY
+  - GITHUB_REPO

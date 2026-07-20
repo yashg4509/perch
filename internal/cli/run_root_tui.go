@@ -88,7 +88,7 @@ func runRootTUI(cmd *cobra.Command) error {
 		cfgRef := cfg
 		regRef := reg
 		fetch = func(ctx context.Context, env string) (*stackstatus.EnvReport, error) {
-			return stackstatus.Collect(ctx, cfgRef, env, regRef)
+			return stackstatus.Collect(ctx, cfgRef, env, regRef, stackstatus.CollectOptions{})
 		}
 	}
 	m := tui.NewStackModelWithEnvsAndFetch(g, loadErr, noColor, envSw, fetch)

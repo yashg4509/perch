@@ -48,6 +48,15 @@ func TestLoadRegistry_typedDeployableAndReadOnly(t *testing.T) {
 	if v.Credentials.Key != "vercel_token" {
 		t.Fatal(v.Credentials.Key)
 	}
+	if v.Credentials.EnvVar != "VERCEL_TOKEN" {
+		t.Fatalf("env_var=%q", v.Credentials.EnvVar)
+	}
+	if v.CLI.AuthCmd != "vercel login" {
+		t.Fatalf("auth_cmd=%q", v.CLI.AuthCmd)
+	}
+	if v.CLI.Install["npm"] == "" {
+		t.Fatal("missing npm install")
+	}
 
 	o, ok := reg.ByName["openai"]
 	if !ok {
@@ -84,6 +93,31 @@ credentials:
 `))
 	if err == nil {
 		t.Fatal("expected error: deployable requires cli.commands.status")
+	}
+}
+
+func TestParseProviderYAML_optionalFieldsAbsent(t *testing.T) {
+	spec, err := provider.ParseProviderYAML([]byte(`
+name: minimal
+category: saas
+deployable: false
+api:
+  base_url: "https://api.example.com"
+  auth_header: "Authorization: Bearer {token}"
+  endpoints:
+    status: "GET /v1/status"
+credentials:
+  key: example_token
+  prompt: "Example token"
+`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if spec.CLI != nil {
+		t.Fatal("expected no cli")
+	}
+	if spec.Credentials.DashboardURL != "" || spec.Credentials.EnvVar != "" {
+		t.Fatalf("credentials: %+v", spec.Credentials)
 	}
 }
 

@@ -24,3 +24,10 @@ api:
 credentials:
   key: railway_token
   prompt: "Railway account or workspace API token (railway.com/account/tokens)"
+  env_aliases:
+    - RAILWAY_TOKEN
+
+project_env_aliases:
+  - RAILWAY_PROJECT_ID
+service_env_aliases:
+  - RAILWAY_SERVICE_ID

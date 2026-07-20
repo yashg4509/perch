@@ -8,7 +8,15 @@ api:
   auth_header: "Authorization: Bearer {token}"
   endpoints:
     status: "GET /apps/{project}/channels"
+  status_probe: signed
 
 credentials:
   key: pusher_http_api_token
-  prompt: "Pusher Channels: use app id as {project}; signing query params required for live calls (see Pusher HTTP API docs)"
+  prompt: "Pusher app secret (PUSHER_SECRET); status probe also needs PUSHER_KEY and PUSHER_APP_ID in .env"
+  env_aliases:
+    - PUSHER_SECRET
+
+project_env_aliases:
+  - PUSHER_APP_ID
+
+# PUSHER_CLUSTER (e.g. us2) selects api-{cluster}.pusher.com for signed status probes.
