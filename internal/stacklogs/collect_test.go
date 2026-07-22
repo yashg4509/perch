@@ -281,7 +281,7 @@ func TestReadVercelAuthToken_OSPath(t *testing.T) {
 	platformHooks.userHomeDir = func() (string, error) { return tmp, nil }
 	platformHooks.readFile = os.ReadFile
 
-	tok, ok := readVercelAuthToken()
+	tok, ok := ReadVercelAuthToken()
 	if !ok || tok != "from_file" {
 		t.Fatalf("token=%q ok=%v", tok, ok)
 	}
@@ -330,7 +330,7 @@ func TestVercelAuthFilePath_MacSpaces(t *testing.T) {
 		t.Fatal(err)
 	}
 	platformHooks.readFile = os.ReadFile
-	tok, ok := readVercelAuthToken()
+	tok, ok := ReadVercelAuthToken()
 	if !ok || tok != "spaced_path_ok" {
 		t.Fatalf("token=%q ok=%v", tok, ok)
 	}

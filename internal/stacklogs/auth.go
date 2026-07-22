@@ -14,17 +14,18 @@ func AuthFileToken(spec *provider.Spec) (string, bool) {
 	}
 	switch spec.Name {
 	case "vercel":
-		return readVercelAuthToken()
+		return ReadVercelAuthToken()
 	case "render":
-		return readRenderAuthToken()
+		return ReadRenderAuthToken()
 	case "supabase":
-		return readSupabaseAuthToken()
+		return ReadSupabaseAuthToken()
 	default:
 		return "", false
 	}
 }
 
-func readVercelAuthToken() (string, bool) {
+// ReadVercelAuthToken reads the Vercel CLI auth.json token.
+func ReadVercelAuthToken() (string, bool) {
 	path := vercelAuthFilePath()
 	if path == "" {
 		return "", false

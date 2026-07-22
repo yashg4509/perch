@@ -44,7 +44,7 @@ func TestReadRenderAuthToken(t *testing.T) {
 	platformHooks.userHomeDir = func() (string, error) { return tmp, nil }
 	platformHooks.readFile = os.ReadFile
 
-	tok, ok := readRenderAuthToken()
+	tok, ok := ReadRenderAuthToken()
 	if !ok || tok != "render_tok" {
 		t.Fatalf("token=%q ok=%v", tok, ok)
 	}
@@ -82,7 +82,7 @@ func TestReadSupabaseAuthToken(t *testing.T) {
 	platformHooks.userHomeDir = func() (string, error) { return tmp, nil }
 	platformHooks.readFile = os.ReadFile
 
-	tok, ok := readSupabaseAuthToken()
+	tok, ok := ReadSupabaseAuthToken()
 	if !ok || tok != "sbp_test_token" {
 		t.Fatalf("token=%q ok=%v", tok, ok)
 	}
@@ -104,7 +104,7 @@ func TestReadSupabaseAuthToken_Keyring(t *testing.T) {
 	platformHooks.userHomeDir = func() (string, error) { return tmp, nil }
 	platformHooks.readFile = os.ReadFile
 
-	tok, ok := readSupabaseAuthToken()
+	tok, ok := ReadSupabaseAuthToken()
 	if !ok || tok != "sbp_from_keyring" {
 		t.Fatalf("token=%q ok=%v", tok, ok)
 	}

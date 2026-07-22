@@ -10,6 +10,8 @@ import (
 	"testing"
 
 	"github.com/yashg4509/perch/internal/cli"
+	"github.com/yashg4509/perch/internal/provider"
+	"github.com/yashg4509/perch/internal/stackstatus"
 )
 
 const contextTestYAML = `name: golden-app
@@ -60,6 +62,12 @@ func TestContext_forAgent_text(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Setenv("PERCH_CREDENTIALS_PATH", credPath)
+	// Isolate from the developer's real CLI auth files / keychain home paths.
+	t.Setenv("HOME", tmp)
+	prevTok := stackstatus.SetDeployableTokenFnForTest(func(*provider.Spec) (string, bool) {
+		return "", false
+	})
+	t.Cleanup(func() { stackstatus.SetDeployableTokenFnForTest(prevTok) })
 	t.Chdir(tmp)
 
 	var buf bytes.Buffer
@@ -76,12 +84,15 @@ func TestContext_forAgent_text(t *testing.T) {
 		"Environment: production",
 		"SKIPPED — in perch.yaml",
 		"api",
-		"PENDING",
+		"DOWN",
 		"web",
 	} {
 		if !strings.Contains(s, needle) {
 			t.Fatalf("missing %q in:\n%s", needle, s)
 		}
+	}
+	if strings.Contains(s, "PENDING — deploy/host check not implemented") {
+		t.Fatalf("unexpected placeholder pending in:\n%s", s)
 	}
 }
 

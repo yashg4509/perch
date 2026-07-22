@@ -14,6 +14,11 @@ import (
 )
 
 func TestCollect_JSONGolden(t *testing.T) {
+	prev := stackstatus.SetDeployableTokenFnForTest(func(*provider.Spec) (string, bool) {
+		return "", false
+	})
+	t.Cleanup(func() { stackstatus.SetDeployableTokenFnForTest(prev) })
+
 	ctx := context.Background()
 	root := testutil.RepoRoot(t)
 	reg, err := provider.LoadRegistry(filepath.Join(root, "providers"))

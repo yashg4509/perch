@@ -35,7 +35,7 @@ func resolveSupabaseLogs(ctx context.Context, nodeName string, n config.Node, re
 	var tried []StrategyResult
 
 	// 1. auth_file
-	if tok, hasTok := readSupabaseAuthToken(); hasTok {
+	if tok, hasTok := ReadSupabaseAuthToken(); hasTok {
 		sr := StrategyResult{Name: "auth_file"}
 		res, fetched, authFailed := tryFetchSupabaseLogs(ctx, spec, tok, project, "auth_file")
 		if fetched {
@@ -256,7 +256,8 @@ var supabaseKeyringGet = func(service, account string) (string, error) {
 	return keyring.Get(service, account)
 }
 
-func readSupabaseAuthToken() (string, bool) {
+// ReadSupabaseAuthToken reads the Supabase CLI access token from file or OS keyring.
+func ReadSupabaseAuthToken() (string, bool) {
 	// Prefer the legacy plain-text file when present (tests + older CLI installs).
 	if tok, ok := readSupabaseAuthTokenFile(); ok {
 		return tok, true

@@ -36,7 +36,7 @@ func resolveVercel(ctx context.Context, nodeName string, n config.Node, reg *pro
 	var tried []StrategyResult
 
 	// 1. auth_file
-	if tok, hasTok := readVercelAuthToken(); hasTok {
+	if tok, hasTok := ReadVercelAuthToken(); hasTok {
 		sr := StrategyResult{Name: "auth_file"}
 		res, fetched, authFailed := tryFetchVercelLogs(ctx, spec, tok, project, "auth_file")
 		if fetched {

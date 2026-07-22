@@ -2,6 +2,7 @@ package stackstatus
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -121,9 +122,22 @@ func statusRow(ctx context.Context, reg *provider.Registry, opts CollectOptions,
 	}
 
 	if spec.Deployable {
-		row.Healthy = false
-		row.StatusSource = SourcePlaceholder
-		row.Detail = "deployable host status API not implemented yet"
+		healthy, detail, probeErr := probeProvider(ctx, spec, n)
+		if errors.Is(probeErr, errDeployableProbeUnimplemented) {
+			row.Healthy = false
+			row.StatusSource = SourcePlaceholder
+			row.Detail = "deployable host status API not implemented yet"
+			return row, nil, nil
+		}
+		if probeErr != nil {
+			row.Healthy = false
+			row.StatusSource = SourcePlaceholder
+			row.Detail = fmt.Sprintf("probe error: %v", probeErr)
+			return row, nil, nil
+		}
+		row.Healthy = healthy
+		row.StatusSource = SourceProbe
+		row.Detail = detail
 		return row, nil, nil
 	}
 
