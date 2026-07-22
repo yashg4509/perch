@@ -14,6 +14,7 @@ import (
 	"github.com/yashg4509/perch/internal/config"
 	"github.com/yashg4509/perch/internal/provider"
 	"github.com/yashg4509/perch/internal/testutil"
+	"github.com/zalando/go-keyring"
 )
 
 func TestRenderAuthFilePath(t *testing.T) {
@@ -64,6 +65,11 @@ func TestSupabaseAuthFilePath(t *testing.T) {
 func TestReadSupabaseAuthToken(t *testing.T) {
 	restore := swapPlatformHooks(t)
 	defer restore()
+	prevKeyring := supabaseKeyringGet
+	supabaseKeyringGet = func(string, string) (string, error) {
+		return "", keyring.ErrNotFound
+	}
+	defer func() { supabaseKeyringGet = prevKeyring }()
 
 	tmp := t.TempDir()
 	authPath := filepath.Join(tmp, ".supabase", "access-token")
@@ -78,6 +84,28 @@ func TestReadSupabaseAuthToken(t *testing.T) {
 
 	tok, ok := readSupabaseAuthToken()
 	if !ok || tok != "sbp_test_token" {
+		t.Fatalf("token=%q ok=%v", tok, ok)
+	}
+}
+
+func TestReadSupabaseAuthToken_Keyring(t *testing.T) {
+	restore := swapPlatformHooks(t)
+	defer restore()
+	prevKeyring := supabaseKeyringGet
+	supabaseKeyringGet = func(service, account string) (string, error) {
+		if service == "Supabase CLI" && account == "supabase" {
+			return "sbp_from_keyring", nil
+		}
+		return "", keyring.ErrNotFound
+	}
+	defer func() { supabaseKeyringGet = prevKeyring }()
+
+	tmp := t.TempDir()
+	platformHooks.userHomeDir = func() (string, error) { return tmp, nil }
+	platformHooks.readFile = os.ReadFile
+
+	tok, ok := readSupabaseAuthToken()
+	if !ok || tok != "sbp_from_keyring" {
 		t.Fatalf("token=%q ok=%v", tok, ok)
 	}
 }
@@ -138,16 +166,24 @@ func TestResolve_Render_AuthFile(t *testing.T) {
 func TestResolve_Supabase_AuthFile(t *testing.T) {
 	restore := swapPlatformHooks(t)
 	defer restore()
+	prevKeyring := supabaseKeyringGet
+	supabaseKeyringGet = func(string, string) (string, error) {
+		return "", keyring.ErrNotFound
+	}
+	defer func() { supabaseKeyringGet = prevKeyring }()
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("Authorization") != "Bearer sbp_test" {
 			t.Fatalf("auth %q", r.Header.Get("Authorization"))
 		}
-		if !strings.HasSuffix(r.URL.Path, "/projects/ref-test/logs") {
+		if !strings.HasSuffix(r.URL.Path, "/projects/ref-test/analytics/endpoints/logs.all") {
 			t.Fatalf("path %s", r.URL.Path)
 		}
-		if r.URL.Query().Get("sql") != "SELECT * FROM postgres_logs LIMIT 100" {
+		if r.URL.Query().Get("sql") != "SELECT event_message FROM postgres_logs LIMIT 100" {
 			t.Fatalf("sql=%q", r.URL.Query().Get("sql"))
+		}
+		if r.URL.Query().Get("iso_timestamp_start") == "" || r.URL.Query().Get("iso_timestamp_end") == "" {
+			t.Fatalf("missing timestamp window: %v", r.URL.Query())
 		}
 		_, _ = io.WriteString(w, `{"result":[{"event_message":"postgres says hi"}]}`)
 	}))

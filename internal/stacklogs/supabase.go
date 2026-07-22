@@ -9,9 +9,11 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/yashg4509/perch/internal/config"
 	"github.com/yashg4509/perch/internal/provider"
+	"github.com/zalando/go-keyring"
 )
 
 // TODO: v2 pagination and iso_timestamp_start/end windowing for Supabase logs API.
@@ -132,9 +134,14 @@ func fetchSupabaseLogs(ctx context.Context, spec *provider.Spec, token, project,
 }
 
 func supabaseProjectLogs(ctx context.Context, spec *provider.Spec, token, project string) ([]string, error) {
-	path := fmt.Sprintf("/projects/%s/logs", url.PathEscape(project))
+	// Management API analytics logs endpoint (not /projects/{ref}/logs).
+	path := fmt.Sprintf("/projects/%s/analytics/endpoints/logs.all", url.PathEscape(project))
 	q := url.Values{}
-	q.Set("sql", "SELECT * FROM postgres_logs LIMIT 100")
+	q.Set("sql", "SELECT event_message FROM postgres_logs LIMIT 100")
+	end := time.Now().UTC()
+	start := end.Add(-24 * time.Hour)
+	q.Set("iso_timestamp_start", start.Format(time.RFC3339))
+	q.Set("iso_timestamp_end", end.Format(time.RFC3339))
 	body, err := supabaseGET(ctx, spec, token, path, q)
 	if err != nil {
 		return nil, err
@@ -240,7 +247,27 @@ func supabaseAuthFilePath() string {
 	return homePath(".supabase", "access-token")
 }
 
+// supabaseKeyringService matches the Supabase CLI credentials store namespace
+// (zalando/go-keyring → macOS Keychain / Linux Secret Service / Windows Credential Manager).
+const supabaseKeyringService = "Supabase CLI"
+
+// supabaseKeyringGet is swapped in tests so CI/dev keychains do not leak into unit tests.
+var supabaseKeyringGet = func(service, account string) (string, error) {
+	return keyring.Get(service, account)
+}
+
 func readSupabaseAuthToken() (string, bool) {
+	// Prefer the legacy plain-text file when present (tests + older CLI installs).
+	if tok, ok := readSupabaseAuthTokenFile(); ok {
+		return tok, true
+	}
+	if tok, ok := readSupabaseAuthTokenKeyring(); ok {
+		return tok, true
+	}
+	return "", false
+}
+
+func readSupabaseAuthTokenFile() (string, bool) {
 	path := supabaseAuthFilePath()
 	if path == "" {
 		return "", false
@@ -251,4 +278,29 @@ func readSupabaseAuthToken() (string, bool) {
 	}
 	tok := strings.TrimSpace(string(b))
 	return tok, tok != ""
+}
+
+func readSupabaseAuthTokenKeyring() (string, bool) {
+	for _, account := range supabaseKeyringAccounts() {
+		tok, err := supabaseKeyringGet(supabaseKeyringService, account)
+		if err != nil {
+			continue
+		}
+		tok = strings.TrimSpace(tok)
+		if tok != "" {
+			return tok, true
+		}
+	}
+	return "", false
+}
+
+func supabaseKeyringAccounts() []string {
+	// Default profile name used by the Supabase CLI; profile file may override.
+	accounts := []string{"supabase"}
+	if b, err := platformHooks.readFile(homePath(".supabase", "profile")); err == nil {
+		if name := strings.TrimSpace(string(b)); name != "" && name != "supabase" {
+			accounts = append([]string{name}, accounts...)
+		}
+	}
+	return accounts
 }
