@@ -343,5 +343,18 @@ func joinAPIPath(baseURL, path string) (*url.URL, error) {
 	if err != nil {
 		return nil, err
 	}
+	// ResolveReference treats "/segment" as replacing the entire base path
+	// (e.g. https://api.render.com/v1 + /services/x → https://api.render.com/services/x).
+	// When base_url includes a version prefix, append the endpoint path instead.
+	// Same fix as provider.joinBaseURL.
+	if strings.HasPrefix(path, "/") && base.Path != "" && base.Path != "/" {
+		merged := strings.TrimSuffix(base.Path, "/") + rel.Path
+		return &url.URL{
+			Scheme:   base.Scheme,
+			Host:     base.Host,
+			Path:     merged,
+			RawQuery: rel.RawQuery,
+		}, nil
+	}
 	return base.ResolveReference(rel), nil
 }
