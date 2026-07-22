@@ -34,7 +34,7 @@ func resolveRenderLogs(ctx context.Context, nodeName string, n config.Node, reg 
 	var tried []StrategyResult
 
 	// 1. auth_file
-	if tok, hasTok := readRenderAuthToken(); hasTok {
+	if tok, hasTok := ReadRenderAuthToken(); hasTok {
 		sr := StrategyResult{Name: "auth_file"}
 		res, fetched, authFailed := tryFetchRenderLogs(ctx, spec, tok, service, "auth_file")
 		if fetched {
@@ -240,7 +240,8 @@ func renderAuthFilePath() string {
 	return homePath(".config", "render", "config.yaml")
 }
 
-func readRenderAuthToken() (string, bool) {
+// ReadRenderAuthToken reads the Render CLI config.yaml API key.
+func ReadRenderAuthToken() (string, bool) {
 	path := renderAuthFilePath()
 	if path == "" {
 		return "", false

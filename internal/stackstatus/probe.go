@@ -2,25 +2,38 @@ package stackstatus
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"net/http"
+	"os"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/yashg4509/perch/internal/config"
+	"github.com/yashg4509/perch/internal/credentials"
 	"github.com/yashg4509/perch/internal/provider"
+	"github.com/yashg4509/perch/internal/stacklogs"
 	"golang.org/x/sync/errgroup"
 )
 
 const (
 	defaultProbeConcurrency = 8
 	probeDetailMaxLen       = 80
+	deployableProbeTimeout  = 5 * time.Second
 )
 
-// SourceAPI means a live vendor status endpoint was called.
+// SourceAPI means a live vendor status endpoint was called (non-deployable providers).
 const SourceAPI = "api"
+
+// SourceProbe means a live deployable host health check was called.
+const SourceProbe = "probe"
 
 // SourceAppEnv means the node is satisfied by project .env (e.g. INNGEST_DEV, DATABASE_URL).
 const SourceAppEnv = "app_env"
+
+// errDeployableProbeUnimplemented is returned when a deployable provider has no probe yet.
+var errDeployableProbeUnimplemented = errors.New("deployable probe not implemented")
 
 type probeJob struct {
 	index      int
@@ -195,4 +208,184 @@ func shouldProbeAPI(spec *provider.Spec, opts CollectOptions, _ func(string) (bo
 		return "", false
 	}
 	return strings.TrimSpace(v), true
+}
+
+// probeProvider runs a 5s live health check for deployable hosts (vercel, render, supabase).
+func probeProvider(ctx context.Context, spec *provider.Spec, n config.Node) (healthy bool, detail string, err error) {
+	if spec == nil {
+		return false, "", errDeployableProbeUnimplemented
+	}
+	switch spec.Name {
+	case "vercel", "render", "supabase":
+	default:
+		return false, "", errDeployableProbeUnimplemented
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, deployableProbeTimeout)
+	defer cancel()
+
+	token, ok := deployableProbeToken(spec)
+	if !ok {
+		return false, "missing credential (run perch logs setup)", nil
+	}
+
+	client := provider.HTTPClientForAPI()
+	switch spec.Name {
+	case "vercel":
+		return probeVercelDeployable(ctx, client, spec, n, token)
+	case "render":
+		return probeRenderDeployable(ctx, client, spec, n, token)
+	case "supabase":
+		return probeSupabaseDeployable(ctx, client, spec, n, token)
+	default:
+		return false, "", errDeployableProbeUnimplemented
+	}
+}
+
+// deployableTokenFn is swapped in tests so machine CLI auth does not leak into unit tests.
+var deployableTokenFn = defaultDeployableProbeToken
+
+func deployableProbeToken(spec *provider.Spec) (string, bool) {
+	return deployableTokenFn(spec)
+}
+
+func defaultDeployableProbeToken(spec *provider.Spec) (string, bool) {
+	if tok, ok := stacklogs.AuthFileToken(spec); ok {
+		return tok, true
+	}
+	key := strings.TrimSpace(spec.Credentials.Key)
+	if key != "" {
+		store := credentials.NewStore()
+		if v, ok, err := store.Get(key); err == nil && ok {
+			if tok := strings.TrimSpace(v); tok != "" {
+				return tok, true
+			}
+		}
+	}
+	if ev := strings.TrimSpace(spec.Credentials.EnvVar); ev != "" {
+		if tok := strings.TrimSpace(os.Getenv(ev)); tok != "" {
+			return tok, true
+		}
+	}
+	return "", false
+}
+
+// SetDeployableTokenFnForTest replaces deployable token discovery. Returns the previous fn.
+func SetDeployableTokenFnForTest(fn func(*provider.Spec) (string, bool)) func(*provider.Spec) (string, bool) {
+	prev := deployableTokenFn
+	if fn == nil {
+		deployableTokenFn = defaultDeployableProbeToken
+	} else {
+		deployableTokenFn = fn
+	}
+	return prev
+}
+
+func probeVercelDeployable(ctx context.Context, client *http.Client, spec *provider.Spec, n config.Node, token string) (bool, string, error) {
+	project := strings.TrimSpace(n.Project)
+	if project == "" {
+		return false, "node needs a project field for Vercel probe", nil
+	}
+	var body struct {
+		Name string `json:"name"`
+	}
+	err := provider.DoGETJSON(ctx, client, spec, "status", map[string]string{
+		"token": token, "project": project, "service": "",
+	}, &body)
+	if detail, handled := deployableProbeError(err); handled {
+		return false, detail, nil
+	}
+	if err != nil {
+		return false, truncateProbeDetail(err.Error()), nil
+	}
+	name := strings.TrimSpace(body.Name)
+	if name == "" {
+		name = project
+	}
+	return true, fmt.Sprintf("project %s active", name), nil
+}
+
+func probeRenderDeployable(ctx context.Context, client *http.Client, spec *provider.Spec, n config.Node, token string) (bool, string, error) {
+	service := strings.TrimSpace(n.Service)
+	if service == "" {
+		return false, "node needs a service field for Render probe", nil
+	}
+	var body struct {
+		Name      string `json:"name"`
+		Status    string `json:"status"`
+		Suspended string `json:"suspended"`
+	}
+	err := provider.DoGETJSON(ctx, client, spec, "status", map[string]string{
+		"token": token, "project": "", "service": service,
+	}, &body)
+	if detail, handled := deployableProbeError(err); handled {
+		return false, detail, nil
+	}
+	if err != nil {
+		return false, truncateProbeDetail(err.Error()), nil
+	}
+	name := strings.TrimSpace(body.Name)
+	if name == "" {
+		name = service
+	}
+	status := strings.ToLower(strings.TrimSpace(body.Status))
+	suspended := strings.ToLower(strings.TrimSpace(body.Suspended))
+	// Render API uses suspended=not_suspended; some status fields use "live".
+	live := status == "live" || suspended == "not_suspended" || (status == "" && suspended == "")
+	if !live {
+		detail := fmt.Sprintf("service %s not live", name)
+		if suspended != "" {
+			detail = fmt.Sprintf("service %s suspended=%s", name, body.Suspended)
+		} else if status != "" {
+			detail = fmt.Sprintf("service %s status=%s", name, body.Status)
+		}
+		return false, detail, nil
+	}
+	return true, fmt.Sprintf("service %s live", name), nil
+}
+
+func probeSupabaseDeployable(ctx context.Context, client *http.Client, spec *provider.Spec, n config.Node, token string) (bool, string, error) {
+	ref := strings.TrimSpace(n.Project)
+	if ref == "" {
+		return false, "node needs a project field for Supabase probe", nil
+	}
+	var body struct {
+		Name   string `json:"name"`
+		Status string `json:"status"`
+	}
+	err := provider.DoGETJSON(ctx, client, spec, "status", map[string]string{
+		"token": token, "project": ref, "service": "",
+	}, &body)
+	if detail, handled := deployableProbeError(err); handled {
+		return false, detail, nil
+	}
+	if err != nil {
+		return false, truncateProbeDetail(err.Error()), nil
+	}
+	name := strings.TrimSpace(body.Name)
+	if name == "" {
+		name = ref
+	}
+	if strings.TrimSpace(body.Status) != "ACTIVE_HEALTHY" {
+		return false, fmt.Sprintf("project %s status=%s", name, strings.TrimSpace(body.Status)), nil
+	}
+	return true, fmt.Sprintf("project %s healthy", name), nil
+}
+
+func deployableProbeError(err error) (detail string, handled bool) {
+	if err == nil {
+		return "", false
+	}
+	if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
+		return "probe timed out", true
+	}
+	msg := err.Error()
+	if strings.Contains(msg, "401") || strings.Contains(msg, "403") ||
+		strings.Contains(msg, "Unauthorized") || strings.Contains(msg, "Forbidden") {
+		return "credential invalid or expired", true
+	}
+	if strings.Contains(msg, "deadline exceeded") || strings.Contains(msg, "Client.Timeout") {
+		return "probe timed out", true
+	}
+	return "", false
 }

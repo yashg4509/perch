@@ -29,7 +29,7 @@ func GroupFor(n NodeReport) DisplayGroup {
 		return GroupNotWired
 	case SourcePlaceholder:
 		return GroupPending
-	case SourceShell, SourceAPI:
+	case SourceShell, SourceAPI, SourceProbe:
 		return GroupDown
 	default:
 		if !n.Configured {
